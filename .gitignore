@@ -1,0 +1,20 @@
+# Databricks credentials - NEVER commit
+.databrickscfg
+
+# Python virtual environment
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Logs
+tests/*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp

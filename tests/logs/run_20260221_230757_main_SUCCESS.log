@@ -1,0 +1,11 @@
+Step: main
+Notebook: /Workspace/Users/khachornpop@inteltion.com/vrh/match_and_merge/vrh_chv_main_v2
+Run ID: 927762266107602
+URL: https://adb-7405612978007880.0.azuredatabricks.net/#job/runs/927762266107602
+Result: SUCCESS
+
+PARAMS:
+{
+  "table_name": "SOURCE_MOTOR",
+  "data_date": "2026-01-05"
+}

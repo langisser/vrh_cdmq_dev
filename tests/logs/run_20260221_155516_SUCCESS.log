@@ -1,0 +1,29 @@
+================================================================================
+VRH Pipeline Run Log
+Timestamp   : 2026-02-21T15:55:16.668818
+Mode        : main
+Notebook    : /Workspace/Users/khachornpop@inteltion.com/vrh/match_and_merge/vrh_chv_main
+Run ID      : 669768490255128
+Run URL     : https://adb-7405612978007880.0.azuredatabricks.net/#job/runs/669768490255128
+Result      : SUCCESS
+================================================================================
+
+PARAMETERS:
+{
+  "table_name": "tc_case2_similarity",
+  "data_date": "2015-12-28"
+}
+
+STATUS:
+{
+  "life_cycle_state": "TERMINATED",
+  "result_state": "SUCCESS",
+  "state_message": "",
+  "run_page_url": "https://adb-7405612978007880.0.azuredatabricks.net/?o=7405612978007880#job/63905212502894/run/669768490255128",
+  "start_time": 1771663890292,
+  "end_time": 1771664110828
+}
+
+================================================================================
+EXECUTION LOG:
+Submitted run_id=669768490255128  url=https://adb-7405612978007880.0.azuredatabricks.net/#job/runs/669768490255128

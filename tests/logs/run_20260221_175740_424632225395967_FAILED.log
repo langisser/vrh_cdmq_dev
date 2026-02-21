@@ -1,0 +1,154 @@
+════════════════════════════════════════════════════
+  Run ID  : 424632225395967
+  Result  : FAILED
+  Run URL : https://adb-7405612978007880.0.azuredatabricks.net/#job/runs/424632225395967
+  Fetched : Sat Feb 21 17:57:40 +07 2026
+════════════════════════════════════════════════════
+
+STATUS:
+{
+    "job_id": 81432007412732,
+    "run_id": 424632225395967,
+    "creator_user_name": "khachornpop@inteltion.com",
+    "number_in_job": 424632225395967,
+    "state": {
+        "life_cycle_state": "TERMINATED",
+        "result_state": "FAILED",
+        "state_message": "Workload failed, see run output for details",
+        "user_cancelled_or_timedout": false
+    },
+    "start_time": 1771670442872,
+    "setup_duration": 1000,
+    "execution_duration": 28000,
+    "cleanup_duration": 0,
+    "end_time": 1771670472370,
+    "run_name": "vrh_v2_match_20260221_174032",
+    "run_page_url": "https://adb-7405612978007880.0.azuredatabricks.net/?o=7405612978007880#job/81432007412732/run/424632225395967",
+    "run_type": "SUBMIT_RUN",
+    "tasks": [
+        {
+            "run_id": 424632225395967,
+            "task_key": "vrh_v2_match_20260221_174032",
+            "notebook_task": {
+                "notebook_path": "/Workspace/Users/khachornpop@inteltion.com/vrh/match_and_merge/vrh_chv_match_v2",
+                "base_parameters": {
+                    "PARAMS": "viriyah_cdqm_poc.silver.tc_case2_similarity^|2015-12-28^|EDP_MATCHING_V2_TC_CASE2_SIMILARITY_DATE_2015-12-28^|1^|EDP_MATCHING_V2_TC_CASE2_SIMILARITY_DATE_2015-12-28^|1",
+                    "ENV": "dev"
+                },
+                "source": "WORKSPACE"
+            },
+            "existing_cluster_id": "0130-031624-0nmpnh8g",
+            "state": {
+                "life_cycle_state": "TERMINATED",
+                "result_state": "FAILED",
+                "state_message": "Workload failed, see run output for details",
+                "user_cancelled_or_timedout": false
+            },
+            "run_page_url": "https://adb-7405612978007880.0.azuredatabricks.net/?o=7405612978007880#job/81432007412732/run/424632225395967",
+            "start_time": 1771670442872,
+            "setup_duration": 1000,
+            "execution_duration": 28000,
+            "cleanup_duration": 0,
+            "end_time": 1771670472370,
+            "cluster_instance": {
+                "cluster_id": "0130-031624-0nmpnh8g",
+                "spark_context_id": "8736449416453342567"
+            },
+            "attempt_number": 0,
+            "status": {
+                "state": "TERMINATED",
+                "termination_details": {
+                    "code": "RUN_EXECUTION_ERROR",
+                    "type": "CLIENT_ERROR",
+                    "message": "Workload failed, see run output for details"
+                }
+            }
+        }
+    ],
+    "format": "MULTI_TASK",
+    "status": {
+        "state": "TERMINATED",
+        "termination_details": {
+            "code": "RUN_EXECUTION_ERROR",
+            "type": "CLIENT_ERROR",
+            "message": "Workload failed, see run output for details"
+        }
+    },
+    "job_run_id": 424632225395967
+}
+
+OUTPUT / ERROR:
+{
+    "metadata": {
+        "job_id": 81432007412732,
+        "run_id": 424632225395967,
+        "creator_user_name": "khachornpop@inteltion.com",
+        "number_in_job": 424632225395967,
+        "state": {
+            "life_cycle_state": "TERMINATED",
+            "result_state": "FAILED",
+            "state_message": "Workload failed, see run output for details",
+            "user_cancelled_or_timedout": false
+        },
+        "start_time": 1771670442872,
+        "setup_duration": 1000,
+        "execution_duration": 28000,
+        "cleanup_duration": 0,
+        "end_time": 1771670472370,
+        "run_name": "vrh_v2_match_20260221_174032",
+        "run_page_url": "https://adb-7405612978007880.0.azuredatabricks.net/?o=7405612978007880#job/81432007412732/run/424632225395967",
+        "run_type": "SUBMIT_RUN",
+        "tasks": [
+            {
+                "run_id": 424632225395967,
+                "task_key": "vrh_v2_match_20260221_174032",
+                "notebook_task": {
+                    "notebook_path": "/Workspace/Users/khachornpop@inteltion.com/vrh/match_and_merge/vrh_chv_match_v2",
+                    "base_parameters": {
+                        "PARAMS": "viriyah_cdqm_poc.silver.tc_case2_similarity^|2015-12-28^|EDP_MATCHING_V2_TC_CASE2_SIMILARITY_DATE_2015-12-28^|1^|EDP_MATCHING_V2_TC_CASE2_SIMILARITY_DATE_2015-12-28^|1",
+                        "ENV": "dev"
+                    },
+                    "source": "WORKSPACE"
+                },
+                "existing_cluster_id": "0130-031624-0nmpnh8g",
+                "state": {
+                    "life_cycle_state": "TERMINATED",
+                    "result_state": "FAILED",
+                    "state_message": "Workload failed, see run output for details",
+                    "user_cancelled_or_timedout": false
+                },
+                "run_page_url": "https://adb-7405612978007880.0.azuredatabricks.net/?o=7405612978007880#job/81432007412732/run/424632225395967",
+                "start_time": 1771670442872,
+                "setup_duration": 1000,
+                "execution_duration": 28000,
+                "cleanup_duration": 0,
+                "end_time": 1771670472370,
+                "cluster_instance": {
+                    "cluster_id": "0130-031624-0nmpnh8g",
+                    "spark_context_id": "8736449416453342567"
+                },
+                "attempt_number": 0,
+                "status": {
+                    "state": "TERMINATED",
+                    "termination_details": {
+                        "code": "RUN_EXECUTION_ERROR",
+                        "type": "CLIENT_ERROR",
+                        "message": "Workload failed, see run output for details"
+                    }
+                }
+            }
+        ],
+        "format": "MULTI_TASK",
+        "status": {
+            "state": "TERMINATED",
+            "termination_details": {
+                "code": "RUN_EXECUTION_ERROR",
+                "type": "CLIENT_ERROR",
+                "message": "Workload failed, see run output for details"
+            }
+        },
+        "job_run_id": 424632225395967
+    },
+    "error_trace": "",
+    "notebook_output": {}
+}

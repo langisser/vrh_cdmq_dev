@@ -1,0 +1,34 @@
+================================================================================
+VRH Pipeline Run Log
+Timestamp   : 2026-02-21T15:50:02.999392
+Mode        : main
+Notebook    : /Workspace/Users/khachornpop@inteltion.com/vrh/vrh_chv_main
+Run ID      : 500715107612001
+Run URL     : https://adb-7405612978007880.0.azuredatabricks.net/#job/runs/500715107612001
+Result      : FAILED
+================================================================================
+
+PARAMETERS:
+{
+  "table_name": "tc_case2_similarity",
+  "data_date": "2015-12-28"
+}
+
+STATUS:
+{
+  "life_cycle_state": "INTERNAL_ERROR",
+  "result_state": "FAILED",
+  "state_message": "Unable to access the notebook \"/Workspace/Users/khachornpop@inteltion.com/vrh/vrh_chv_main\". Either it does not exist, or the identity used to run this job, Khachornpop(Oat) Wongphakam (khachornpop@inteltion.com), lacks the required permissions.",
+  "run_page_url": "https://adb-7405612978007880.0.azuredatabricks.net/?o=7405612978007880#job/112621653268232/run/500715107612001",
+  "start_time": 1771663797424,
+  "end_time": 1771663797838
+}
+
+================================================================================
+ERROR:
+Run failed with error message
+ Unable to access the notebook "/Workspace/Users/khachornpop@inteltion.com/vrh/vrh_chv_main". Either it does not exist, or the identity used to run this job, Khachornpop(Oat) Wongphakam (khachornpop@inteltion.com), lacks the required permissions.
+
+================================================================================
+EXECUTION LOG:
+Submitted run_id=500715107612001  url=https://adb-7405612978007880.0.azuredatabricks.net/#job/runs/500715107612001

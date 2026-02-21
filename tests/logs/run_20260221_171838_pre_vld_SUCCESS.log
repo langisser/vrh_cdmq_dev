@@ -1,0 +1,11 @@
+Step: pre_vld
+Notebook: /Workspace/Users/khachornpop@inteltion.com/vrh/match_and_merge/vrh_chv_pre_validation_v2
+Run ID: 689400238226750
+URL: https://adb-7405612978007880.0.azuredatabricks.net/#job/runs/689400238226750
+Result: SUCCESS
+
+PARAMS:
+{
+  "PARAMS": "viriyah_cdqm_poc.silver.tc_case2_similarity^|viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2^|2015-12-28^|EDP_PRE_VLD_V2_TC_CASE2_SIMILARITY^|1^|EDP_PRE_VLD_V2_TC_CASE2_SIMILARITY^|1",
+  "ENV": "dev"
+}

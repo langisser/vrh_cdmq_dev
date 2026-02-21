@@ -1,0 +1,110 @@
+Step: main
+Notebook: /Workspace/Users/khachornpop@inteltion.com/vrh/match_and_merge/vrh_chv_main_v2
+Run ID: 779978082597525
+URL: https://adb-7405612978007880.0.azuredatabricks.net/#job/runs/779978082597525
+Result: FAILED
+
+ERROR:
+Py4JJavaError: An error occurred while calling o522.run.
+: com.databricks.WorkflowException: com.databricks.NotebookExecutionException: FAILED: Workload failed, see run output for details
+	at com.databricks.workflow.WorkflowDriver.run(WorkflowDriver.scala:98)
+	at com.databricks.dbutils_v1.impl.NotebookUtilsImpl.run(NotebookUtilsImpl.scala:130)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)
+	at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:397)
+	at py4j.Gateway.invoke(Gateway.java:306)
+	at py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)
+	at py4j.commands.CallCommand.execute(CallCommand.java:79)
+	at py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:197)
+	at py4j.ClientServerConnection.run(ClientServerConnection.java:117)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Caused by: com.databricks.NotebookExecutionException: FAILED: Workload failed, see run output for details
+	at com.databricks.workflow.WorkflowDriver.run0(WorkflowDriver.scala:146)
+	at com.databricks.workflow.WorkflowDriver.run(WorkflowDriver.scala:93)
+	... 13 more
+
+TRACE:
+[0;31m---------------------------------------------------------------------------[0m
+[0;31mPy4JJavaError[0m                             Traceback (most recent call last)
+File [0;32m<command-5524118279233357>, line 18[0m
+[1;32m      7[0m     dbutils[38;5;241m.[39mnotebook[38;5;241m.[39mrun(
+[1;32m      8[0m             pre_vld_path,
+[1;32m      9[0m             timeout_seconds[38;5;241m=[39m[38;5;241m600[39m,
+[1;32m     10[0m             arguments[38;5;241m=[39mpre_parameters
+[1;32m     11[0m         )
+[1;32m     13[0m match_parameters [38;5;241m=[39m {
+[1;32m     14[0m         [38;5;124m"[39m[38;5;124mENV[39m[38;5;124m"[39m: environment,
+[1;32m     15[0m         [38;5;124m"[39m[38;5;124mPARAMS[39m[38;5;124m"[39m: match_param
+[1;32m     16[0m     }
+[0;32m---> 18[0m dbutils[38;5;241m.[39mnotebook[38;5;241m.[39mrun(
+[1;32m     19[0m         match_path,
+[1;32m     20[0m         timeout_seconds[38;5;241m=[39m[38;5;241m1200[39m,
+[1;32m     21[0m         arguments[38;5;241m=[39mmatch_parameters
+[1;32m     22[0m     )
+
+File [0;32m/databricks/python_shell/lib/dbruntime/dbutils.py:327[0m, in [0;36mDBUtils.NotebookHandler.run[0;34m(self, path, timeout_seconds, arguments, *args, **kwargs)[0m
+[1;32m    324[0m arguments_scala_map: [38;5;28mdict[39m[[38;5;28mstr[39m, [38;5;28mstr[39m]
+[1;32m    325[0m arguments_scala_map [38;5;241m=[39m [38;5;28mself[39m[38;5;241m.[39mjvm[38;5;241m.[39morg[38;5;241m.[39mapache[38;5;241m.[39mspark[38;5;241m.[39mapi[38;5;241m.[39mpython[38;5;241m.[39mPythonUtils[38;5;241m.[39mtoScalaMap(
+[1;32m    326[0m     arguments)  [38;5;66;03m# type: ignore[39;00m
+[0;32m--> 327[0m [38;5;28;01mreturn[39;00m [38;5;28mself[39m[38;5;241m.[39mentry_point[38;5;241m.[39mgetDbutils()[38;5;241m.[39mnotebook()[38;5;241m.[39mrun(
+[1;32m    328[0m     path, timeout_seconds, arguments_scala_map, __databricks_internal_cluster_spec)
+
+File [0;32m/databricks/spark/python/lib/py4j-0.10.9.9-src.zip/py4j/java_gateway.py:1362[0m, in [0;36mJavaMember.__call__[0;34m(self, *args)[0m
+[1;32m   1356[0m command [38;5;241m=[39m proto[38;5;241m.[39mCALL_COMMAND_NAME [38;5;241m+[39m\
+[1;32m   1357[0m     [38;5;28mself[39m[38;5;241m.[39mcommand_header [38;5;241m+[39m\
+[1;32m   1358[0m     args_command [38;5;241m+[39m\
+[1;32m   1359[0m     proto[38;5;241m.[39mEND_COMMAND_PART
+[1;32m   1361[0m answer [38;5;241m=[39m [38;5;28mself[39m[38;5;241m.[39mgateway_client[38;5;241m.[39msend_command(command)
+[0;32m-> 1362[0m return_value [38;5;241m=[39m get_return_value(
+[1;32m   1363[0m     answer, [38;5;28mself[39m[38;5;241m.[39mgateway_client, [38;5;28mself[39m[38;5;241m.[39mtarget_id, [38;5;28mself[39m[38;5;241m.[39mname)
+[1;32m   1365[0m [38;5;28;01mfor[39;00m temp_arg [38;5;129;01min[39;00m temp_args:
+[1;32m   1366[0m     [38;5;28;01mif[39;00m [38;5;28mhasattr[39m(temp_arg, [38;5;124m"[39m[38;5;124m_detach[39m[38;5;124m"[39m):
+
+File [0;32m/databricks/spark/python/pyspark/errors/exceptions/captured.py:304[0m, in [0;36mcapture_sql_exception.<locals>.deco[0;34m(*a, **kw)[0m
+[1;32m    301[0m [38;5;28;01mfrom[39;00m [38;5;21;01mpy4j[39;00m[38;5;21;01m.[39;00m[38;5;21;01mprotocol[39;00m [38;5;28;01mimport[39;00m Py4JJavaError
+[1;32m    303[0m [38;5;28;01mtry[39;00m:
+[0;32m--> 304[0m     [38;5;28;01mreturn[39;00m f([38;5;241m*[39ma, [38;5;241m*[39m[38;5;241m*[39mkw)
+[1;32m    305[0m [38;5;28;01mexcept[39;00m Py4JJavaError [38;5;28;01mas[39;00m e:
+[1;32m    306[0m     converted [38;5;241m=[39m convert_exception(e[38;5;241m.[39mjava_exception)
+
+File [0;32m/databricks/spark/python/lib/py4j-0.10.9.9-src.zip/py4j/protocol.py:327[0m, in [0;36mget_return_value[0;34m(answer, gateway_client, target_id, name)[0m
+[1;32m    325[0m value [38;5;241m=[39m OUTPUT_CONVERTER[[38;5;28mtype[39m](answer[[38;5;241m2[39m:], gateway_client)
+[1;32m    326[0m [38;5;28;01mif[39;00m answer[[38;5;241m1[39m] [38;5;241m==[39m REFERENCE_TYPE:
+[0;32m--> 327[0m     [38;5;28;01mraise[39;00m Py4JJavaError(
+[1;32m    328[0m         [38;5;124m"[39m[38;5;124mAn error occurred while calling [39m[38;5;132;01m{0}[39;00m[38;5;132;01m{1}[39;00m[38;5;132;01m{2}[39;00m[38;5;124m.[39m[38;5;130;01m\n[39;00m[38;5;124m"[39m[38;5;241m.[39m
+[1;32m    329[0m         [38;5;28mformat[39m(target_id, [38;5;124m"[39m[38;5;124m.[39m[38;5;124m"[39m, name), value)
+[1;32m    330[0m [38;5;28;01melse[39;00m:
+[1;32m    331[0m     [38;5;28;01mraise[39;00m Py4JError(
+[1;32m    332[0m         [38;5;124m"[39m[38;5;124mAn error occurred while calling [39m[38;5;132;01m{0}[39;00m[38;5;132;01m{1}[39;00m[38;5;132;01m{2}[39;00m[38;5;124m. Trace:[39m[38;5;130;01m\n[39;00m[38;5;132;01m{3}[39;00m[38;5;130;01m\n[39;00m[38;5;124m"[39m[38;5;241m.[39m
+[1;32m    333[0m         [38;5;28mformat[39m(target_id, [38;5;124m"[39m[38;5;124m.[39m[38;5;124m"[39m, name, value))
+
+[0;31mPy4JJavaError[0m: An error occurred while calling o522.run.
+: com.databricks.WorkflowException: com.databricks.NotebookExecutionException: FAILED: Workload failed, see run output for details
+	at com.databricks.workflow.WorkflowDriver.run(WorkflowDriver.scala:98)
+	at com.databricks.dbutils_v1.impl.NotebookUtilsImpl.run(NotebookUtilsImpl.scala:130)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)
+	at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:397)
+	at py4j.Gateway.invoke(Gateway.java:306)
+	at py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)
+	at py4j.commands.CallCommand.execute(CallCommand.java:79)
+	at py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:197)
+	at py4j.ClientServerConnection.run(ClientServerConnection.java:117)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Caused by: com.databricks.NotebookExecutionException: FAILED: Workload failed, see run output for details
+	at com.databricks.workflow.WorkflowDriver.run0(WorkflowDriver.scala:146)
+	at com.databricks.workflow.WorkflowDriver.run(WorkflowDriver.scala:93)
+	... 13 more
+
+
+PARAMS:
+{
+  "table_name": "tc_case2_similarity",
+  "data_date": "2015-12-28"
+}

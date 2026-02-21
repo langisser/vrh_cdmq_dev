@@ -1,0 +1,11 @@
+Step: match
+Notebook: /Workspace/Users/khachornpop@inteltion.com/vrh/match_and_merge/vrh_chv_match_v2
+Run ID: 612259481345770
+URL: https://adb-7405612978007880.0.azuredatabricks.net/#job/runs/612259481345770
+Result: FAILED
+
+PARAMS:
+{
+  "PARAMS": "viriyah_cdqm_poc.silver.tc_case2_similarity^|2015-12-28^|EDP_MATCHING_V2_TC_CASE2_SIMILARITY_DATE_2015-12-28^|1^|EDP_MATCHING_V2_TC_CASE2_SIMILARITY_DATE_2015-12-28^|1",
+  "ENV": "dev"
+}

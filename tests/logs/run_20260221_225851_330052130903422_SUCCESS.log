@@ -1,0 +1,153 @@
+════════════════════════════════════════════════════
+  Run ID  : 330052130903422
+  Result  : SUCCESS
+  Run URL : https://adb-7405612978007880.0.azuredatabricks.net/#job/runs/330052130903422
+  Fetched : Sat Feb 21 22:58:51 +07 2026
+════════════════════════════════════════════════════
+
+STATUS:
+{
+    "job_id": 661381693393557,
+    "run_id": 330052130903422,
+    "creator_user_name": "khachornpop@inteltion.com",
+    "number_in_job": 330052130903422,
+    "state": {
+        "life_cycle_state": "TERMINATED",
+        "result_state": "SUCCESS",
+        "state_message": "",
+        "user_cancelled_or_timedout": false
+    },
+    "start_time": 1771689388180,
+    "setup_duration": 0,
+    "execution_duration": 41000,
+    "cleanup_duration": 0,
+    "end_time": 1771689429390,
+    "run_name": "vrh_v2_match_20260221_225627",
+    "run_page_url": "https://adb-7405612978007880.0.azuredatabricks.net/?o=7405612978007880#job/661381693393557/run/330052130903422",
+    "run_type": "SUBMIT_RUN",
+    "tasks": [
+        {
+            "run_id": 330052130903422,
+            "task_key": "vrh_v2_match_20260221_225627",
+            "notebook_task": {
+                "notebook_path": "/Workspace/Users/khachornpop@inteltion.com/vrh/match_and_merge/vrh_chv_match_v2",
+                "base_parameters": {
+                    "PARAMS": "viriyah_cdqm_poc.silver.tc_case2_similarity^|2015-12-28^|EDP_MATCHING_V2_TC_CASE2_SIMILARITY_DATE_2015-12-28^|1^|EDP_MATCHING_V2_TC_CASE2_SIMILARITY_DATE_2015-12-28^|1",
+                    "ENV": "dev"
+                },
+                "source": "WORKSPACE"
+            },
+            "existing_cluster_id": "0130-031624-0nmpnh8g",
+            "state": {
+                "life_cycle_state": "TERMINATED",
+                "result_state": "SUCCESS",
+                "state_message": "",
+                "user_cancelled_or_timedout": false
+            },
+            "run_page_url": "https://adb-7405612978007880.0.azuredatabricks.net/?o=7405612978007880#job/661381693393557/run/330052130903422",
+            "start_time": 1771689388180,
+            "setup_duration": 0,
+            "execution_duration": 41000,
+            "cleanup_duration": 0,
+            "end_time": 1771689429390,
+            "cluster_instance": {
+                "cluster_id": "0130-031624-0nmpnh8g",
+                "spark_context_id": "5527629100985518492"
+            },
+            "attempt_number": 0,
+            "status": {
+                "state": "TERMINATED",
+                "termination_details": {
+                    "code": "SUCCESS",
+                    "type": "SUCCESS",
+                    "message": ""
+                }
+            }
+        }
+    ],
+    "format": "MULTI_TASK",
+    "status": {
+        "state": "TERMINATED",
+        "termination_details": {
+            "code": "SUCCESS",
+            "type": "SUCCESS",
+            "message": ""
+        }
+    },
+    "job_run_id": 330052130903422
+}
+
+OUTPUT / ERROR:
+{
+    "metadata": {
+        "job_id": 661381693393557,
+        "run_id": 330052130903422,
+        "creator_user_name": "khachornpop@inteltion.com",
+        "number_in_job": 330052130903422,
+        "state": {
+            "life_cycle_state": "TERMINATED",
+            "result_state": "SUCCESS",
+            "state_message": "",
+            "user_cancelled_or_timedout": false
+        },
+        "start_time": 1771689388180,
+        "setup_duration": 0,
+        "execution_duration": 41000,
+        "cleanup_duration": 0,
+        "end_time": 1771689429390,
+        "run_name": "vrh_v2_match_20260221_225627",
+        "run_page_url": "https://adb-7405612978007880.0.azuredatabricks.net/?o=7405612978007880#job/661381693393557/run/330052130903422",
+        "run_type": "SUBMIT_RUN",
+        "tasks": [
+            {
+                "run_id": 330052130903422,
+                "task_key": "vrh_v2_match_20260221_225627",
+                "notebook_task": {
+                    "notebook_path": "/Workspace/Users/khachornpop@inteltion.com/vrh/match_and_merge/vrh_chv_match_v2",
+                    "base_parameters": {
+                        "PARAMS": "viriyah_cdqm_poc.silver.tc_case2_similarity^|2015-12-28^|EDP_MATCHING_V2_TC_CASE2_SIMILARITY_DATE_2015-12-28^|1^|EDP_MATCHING_V2_TC_CASE2_SIMILARITY_DATE_2015-12-28^|1",
+                        "ENV": "dev"
+                    },
+                    "source": "WORKSPACE"
+                },
+                "existing_cluster_id": "0130-031624-0nmpnh8g",
+                "state": {
+                    "life_cycle_state": "TERMINATED",
+                    "result_state": "SUCCESS",
+                    "state_message": "",
+                    "user_cancelled_or_timedout": false
+                },
+                "run_page_url": "https://adb-7405612978007880.0.azuredatabricks.net/?o=7405612978007880#job/661381693393557/run/330052130903422",
+                "start_time": 1771689388180,
+                "setup_duration": 0,
+                "execution_duration": 41000,
+                "cleanup_duration": 0,
+                "end_time": 1771689429390,
+                "cluster_instance": {
+                    "cluster_id": "0130-031624-0nmpnh8g",
+                    "spark_context_id": "5527629100985518492"
+                },
+                "attempt_number": 0,
+                "status": {
+                    "state": "TERMINATED",
+                    "termination_details": {
+                        "code": "SUCCESS",
+                        "type": "SUCCESS",
+                        "message": ""
+                    }
+                }
+            }
+        ],
+        "format": "MULTI_TASK",
+        "status": {
+            "state": "TERMINATED",
+            "termination_details": {
+                "code": "SUCCESS",
+                "type": "SUCCESS",
+                "message": ""
+            }
+        },
+        "job_run_id": 330052130903422
+    },
+    "notebook_output": {}
+}
