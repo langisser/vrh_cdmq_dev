@@ -172,7 +172,54 @@ Unmatched records (`not_pass_post`) receive `SUBJECT = 'default'` via `lit('defa
 
 ---
 
-## 8. Known Limitations
+## 8. Pre-Validation Behavior — Design Discussion
+
+### 8.1 Current Implementation
+
+Pre-validation runs before matching and writes results to `chv_pre_validation_result_v2` (PASSED / FAILED per column per record). The matching notebook then joins against this table using **OR logic** across validated columns:
+
+```sql
+INNER JOIN CHV_PRE_VALIDATION_RESULT_V2 VLD_RESULT
+  ON ... AND VLD_RESULT.RESULT = 'PASSED'
+WHERE ...
+AND (
+  (VLD_RESULT.RULES = 'CHECK_NULL' AND COLUMN = 'Ident_card' AND RESULT = 'PASSED')
+  OR
+  (VLD_RESULT.RULES = 'CHECK_NULL' AND COLUMN = 'Fname'      AND RESULT = 'PASSED')
+)
+```
+
+**Effect:** A record enters matching if **any one** validated column passes — even if another column (e.g. `Ident_card`) is NULL/FAILED.
+
+---
+
+### 8.2 Confirmed Design Decision — Score-Based (Option B) ✅
+
+> **Business confirmed (2026-02-22):** Pre-validation operates at **column level**, not row level.
+> A pre-validation failure on one column does NOT reject the entire record from matching.
+
+**Rule:** Failed columns contribute **zero score** to the weight total. The record can still match if the cumulative score from other (passing) columns meets the threshold (`>= 1`).
+
+**Example:**
+| Record | Ident_card | Fname | Lname | ID weight | Name weight | Total | Result |
+|---|---|---|---|---|---|---|---|
+| NULL id, valid name | NULL → 0 | กิตติ → 0.5 | บุญดี → 0.5 | 0 | 1.0 | 1.0 | MATCH ✅ |
+| Valid id, NULL fname | 7310... → 0.6 | NULL → 0 | บุญดี → 0.5 | 0.6 | 0.5 | 1.1 | MATCH ✅ |
+
+This is **intended behavior** — records with partial data can still be identified if remaining fields provide sufficient evidence.
+
+---
+
+### 8.3 Impact on SCN03 (Null Key Gate)
+
+SCN03 test verdict `FAIL` was based on a strict gate expectation (Option A). With the confirmed Option B behavior, the matching output of SCN03 is **correct by design**:
+- Records with NULL fields but sufficient matching score → correctly grouped under same BKEY
+- Pre-validation log still records the FAILED columns for data quality tracking
+- SCN03 test case expectations should be revised to align with Option B
+
+---
+
+## 9. Known Limitations
 
 - **Source duplicates:** If the source table has duplicate rows (same PK columns), bkey generation deduplicates them. The count of bkey rows may be less than the count of source rows. This is expected behaviour — it reflects data quality in the source, not a pipeline bug.
 - **SUBJECT is single-value per record:** A record can only carry one SUBJECT (from the tier/rule it matched in). Multi-subject grouping is not supported in this design.
