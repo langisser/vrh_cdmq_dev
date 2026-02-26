@@ -16,28 +16,48 @@ This file provides guidance to Claude Code when working with this Databricks dev
 
 Always set the config file path before Databricks operations:
 ```bash
-export DATABRICKS_CONFIG_FILE=/home/khaw/ClaudeCode/vrh/.databrickscfg
-# Or simply:
-source setup_env.sh
+export DATABRICKS_CONFIG_FILE=/home/khaw/ClaudeCode/vrh_cdmq_dev/.databrickscfg
 ```
+
+> **Note:** `setup_env.sh` มีอยู่ในโปรเจคแต่ยังชี้ path เก่า (`vrh/`) — ใช้คำสั่ง export ตรงๆ ข้างบนแทนครับ
 
 ## Project Structure
 
 ```
-vrh/
+vrh_cdmq_dev/
 ├── .databrickscfg                    # Databricks connection config (DO NOT COMMIT)
-├── .gitignore                        # Git ignore rules
-├── .claudeignore                     # Claude Code ignore rules
-├── setup_env.sh                      # Quick environment setup script
+├── .gitignore
+├── setup_env.sh                      # ⚠️ path ยังชี้ vrh/ เก่า — ใช้ export ตรงๆ แทน
 ├── CLAUDE.md                         # This file
-├── README.md                         # Project documentation
+├── README.md
+├── requirements.txt
 ├── notebooks/
-│   ├── work/                         # Active notebooks for development
-│   │   ├── TEMPLATE_main_notebook.py
-│   │   └── TEMPLATE_common_functions.py
-│   └── mirror/                       # Original workspace downloads (reference)
+│   └── work/                         # Active notebooks for development
+│       ├── match_and_merge/          # Main pipeline notebooks
+│       │   ├── vrh_chv_main_v2.py
+│       │   ├── vrh_chv_pre_validation_v2.py
+│       │   ├── vrh_chv_match_v2.py   # ← main notebook (BKEY assignment)
+│       │   ├── vrh_chv_dedup_v2.py
+│       │   └── insert_scripts/       # DDL + config insert notebooks
+│       └── unittest/                 # Unit test notebooks
+│           ├── dedup/
+│           └── tc1/
+├── scripts/                          # Pipeline runner scripts
+│   ├── run_dedup_pipeline.sh         # Full dedup pipeline runner
+│   ├── step0_cleanup_devtest.sql     # Pre-run cleanup SQL (TRUNCATE + DELETE config)
+│   ├── run_ddl_source_devtest.py
+│   ├── run_insert_source_devtest.py
+│   └── ...
+├── docs/                             # Design docs
+│   ├── design_chv_v2.md
+│   ├── execution_and_investigation_guide.md
+│   ├── technical_practices.md
+│   ├── pending_decisions.md
+│   └── ...
+├── source/                           # Source data files
+│   └── Sample_Data_PoC_Match_Merge.xlsx
 ├── tests/                            # Local test runners
-│   └── TEMPLATE_run_notebook.py
+│   └── run_chv_v2.py
 └── venv/                             # Python virtual environment
 ```
 
@@ -86,7 +106,8 @@ cp tests/TEMPLATE_run_notebook.py tests/run_my_notebook.py
 - **Magic commands** (`# MAGIC`, `# COMMAND ----------`, `# DBTITLE`) are stripped during local execution
 - **`safe_notebook_exit()`** works in both workspace and local environments
 - **Version control**: Keep previous notebook versions (e.g., `notebook_v1.py`, `v2.py`)
-- **Always test locally** before uploading to workspace
+- **Workflow จริง:** ไม่ได้ test locally ผ่าน venv — ใช้ `DatabricksSession` (databricks-connect) หรือ `databricks jobs submit` รันบน cluster โดยตรง
+- **venv สำหรับ DatabricksSession:** `/home/khaw/ClaudeCode/databricks_dev_local/venv`
 
 ## Common Commands
 
@@ -110,12 +131,3 @@ databricks jobs list
 3. **Cluster errors**: Verify `cluster_id` is set in `.databrickscfg`
 4. **Parameter errors**: Check parameter names match job definition (case-sensitive)
 
-## Setup Checklist
-
-- [ ] Fill in `.databrickscfg` with host, token, cluster_id
-- [ ] Run `source setup_env.sh` to configure environment
-- [ ] Test connection: `databricks workspace list /Workspace/Users/khachornpop@inteltion.com/vrh`
-- [ ] Activate venv: `source venv/bin/activate`
-- [ ] Download notebooks: `databricks workspace export_dir ...`
-- [ ] Create test runners for each notebook
-- [ ] Update this CLAUDE.md with project-specific workflows
