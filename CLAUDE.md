@@ -32,6 +32,20 @@ databricks workspace export /Workspace/Users/khachornpop@inteltion.com/vrh/<path
   --format SOURCE > notebooks/work/<file>.py
 ```
 
+**Other CLI commands:**
+```bash
+databricks workspace list /Workspace/Users/khachornpop@inteltion.com/vrh   # list workspace
+databricks workspace export_dir /Workspace/.../vrh notebooks/mirror --format SOURCE  # mirror all
+databricks jobs list
+```
+
+**Run SQL directly on cluster (debug/investigate):**
+```python
+from databricks.connect import DatabricksSession
+spark = DatabricksSession.builder.getOrCreate()
+spark.sql("SELECT ...")
+```
+
 **Upload to workspace:**
 ```bash
 databricks workspace import --file notebooks/work/<file>.py \
