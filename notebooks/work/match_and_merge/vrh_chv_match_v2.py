@@ -565,31 +565,44 @@ gen_bkey = gen_bkey.dropDuplicates()
 
 # COMMAND ----------
 
+# ── Phase 3: Union-Find BKEY assignment ──────────────────────────────────────
+all_pairs = gen_bkey.select("MAIN_TABLE", "KEY_MAIN", "MATCHING_TABLE", "KEY_MATCH").collect()
+
+parent = {}
+
+def find(x):
+    if x not in parent:
+        parent[x] = x
+    if parent[x] != x:
+        parent[x] = find(parent[x])  # path compression
+    return parent[x]
+
+def union(x, y):
+    rx, ry = find(x), find(y)
+    if rx != ry:
+        parent[ry] = rx
+
+# Union all matched pairs into connected components
+for i in all_pairs:
+    union((i.MAIN_TABLE, i.KEY_MAIN), (i.MATCHING_TABLE, i.KEY_MATCH))
+
+# Assign one BKEY integer per connected component
+component_bkey = {}
+for node in list(parent.keys()):
+    root = find(node)
+    if root not in component_bkey:
+        bkey += 1
+        component_bkey[root] = str(bkey)
+
+# Build bkey_dict: always store as list for Phase 4 compatibility
 bkey_dict = {}
-#generate bkey to PK in dict format
-for i in gen_bkey.orderBy("KEY_MAIN", "KEY_MATCH").collect():
-  if i.MAIN_TABLE not in bkey_dict.keys() :
-    bkey += 1
-    bkey_dict[i.MAIN_TABLE] = {i.KEY_MAIN : [str(bkey)] }
-  if i.MATCHING_TABLE not in bkey_dict.keys() :
-    if i.KEY_MAIN in bkey_dict[i.MAIN_TABLE].keys():
-      bkey_dict[i.MATCHING_TABLE] = {i.KEY_MATCH : bkey_dict[i.MAIN_TABLE][i.KEY_MAIN]}
-    else:
-      bkey += 1
-      bkey_dict[i.MATCHING_TABLE] = {i.KEY_MATCH : str(bkey) }
+for node in list(parent.keys()):
+    t, k = node
+    if t not in bkey_dict:
+        bkey_dict[t] = {}
+    bkey_dict[t][k] = [component_bkey[find(node)]]
 
-
-  if i.KEY_MAIN not in bkey_dict[i.MAIN_TABLE].keys() and i.KEY_MATCH not in bkey_dict[i.MATCHING_TABLE].keys():
-    bkey += 1
-    bkey_dict[i.MAIN_TABLE][i.KEY_MAIN] = [str(bkey)]
-    bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH] = [str(bkey)]
-  elif i.KEY_MAIN not in bkey_dict[i.MAIN_TABLE].keys() and i.KEY_MATCH in bkey_dict[i.MATCHING_TABLE].keys() :
-    bkey_dict[i.MAIN_TABLE][i.KEY_MAIN] = bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH]
-  elif i.KEY_MAIN in bkey_dict[i.MAIN_TABLE].keys() and i.KEY_MATCH not in bkey_dict[i.MATCHING_TABLE].keys() :
-    bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH] = bkey_dict[i.MAIN_TABLE][i.KEY_MAIN]
-  else :
-    if set(bkey_dict[i.MAIN_TABLE][i.KEY_MAIN]) != set(bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH]) :
-      print(i.KEY_MAIN,bkey_dict[i.MAIN_TABLE][i.KEY_MAIN],i.KEY_MATCH,bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH])
+# ─────────────────────────────────────────────────────────────────────────────
 
 # COMMAND ----------
 
@@ -637,10 +650,23 @@ not_pass_post = not_pass_post.withColumn('BKEY',col('running_number')+bkey)\
 def normalize_key(df):
     return df.withColumn("KEY", col("KEY").cast("string"))
 
+# Deduplicate across all three output paths by (KEY, TABLE):
+# gen_bkey_rs covers keys that were KEY_MATCH (not KEY_MAIN) in matched pairs.
+# not_pass_post covers keys that never appeared as KEY_MAIN — but those keys may
+# already be covered by gen_bkey_rs as KEY_MATCH. Exclude overlaps so each key
+# gets exactly one BKEY.
+_gen_keys = normalize_key(gen_bkey_rs).select("KEY", "TABLE")
+_exists_keys = normalize_key(bkey_exists_rs).select("KEY", "TABLE")
+
+# gen_bkey_rs takes priority over not_pass_post
+# bkey_exists_rs takes priority over gen_bkey_rs
+_gen_bkey_rs_deduped = normalize_key(gen_bkey_rs).join(_exists_keys, on=["KEY", "TABLE"], how="left_anti")
+_not_pass_post_deduped = normalize_key(not_pass_post).join(_gen_keys, on=["KEY", "TABLE"], how="left_anti").join(_exists_keys, on=["KEY", "TABLE"], how="left_anti")
+
 final_df = (
-    normalize_key(gen_bkey_rs)
+    _gen_bkey_rs_deduped
     .unionAll(normalize_key(bkey_exists_rs))
-    .unionAll(normalize_key(not_pass_post))
+    .unionAll(_not_pass_post_deduped)
 )
 
 final_df = (
