@@ -114,12 +114,12 @@ run_notebook "3_data_prep_dedup" \
 # Step 4: Match — assign BKEYs via vrh_chv_match_v2
 run_notebook "4_vrh_chv_match_v2" \
   "$WS/vrh_chv_match_v2" \
-  '{"PARAMS": "viriyah_cdqm_poc.silver.source_motor_devtest^|2026-02-26^|TEST_MATCH_DEDUP^|1^|TEST_MATCH_DEDUP^|1", "ENV": ""}'
+  '{"PARAMS": "viriyah_cdqm_poc.silver.source_motor_devtest^|2026-02-26^|TEST_MATCH_DEDUP^|1^|TEST_MATCH_DEDUP^|1", "ENV": "dev"}'
 
 # Step 5: Dedup — build 5 dedup tables
 run_notebook "5_vrh_chv_dedup_v2" \
   "$WS/vrh_chv_dedup_v2" \
-  '{"PARAMS": "viriyah_cdqm_poc.silver.source_motor_devtest^|2026-02-26^|TEST_DEDUP^|1^|TEST_DEDUP^|1", "ENV": "", "SOURCE_TABLE": "viriyah_cdqm_poc.silver.source_motor_devtest", "TRUST_TABLE": "viriyah_cdqm_poc.silver.trust_source_devtest"}'
+  '{"PARAMS": "viriyah_cdqm_poc.silver.source_motor_devtest^|2026-02-26^|TEST_DEDUP^|1^|TEST_DEDUP^|1", "ENV": "dev", "SOURCE_TABLE": "viriyah_cdqm_poc.silver.source_motor_devtest", "TRUST_TABLE": "viriyah_cdqm_poc.silver.trust_source_devtest"}'
 
 # Step 6: Assert results
 run_notebook "6_test_dedup_v2" \

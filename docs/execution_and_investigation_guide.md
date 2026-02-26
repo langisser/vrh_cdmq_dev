@@ -52,39 +52,44 @@ vrh_chv_main_v2 จะ:
 
 ### Option B: Run ทีละ notebook (debug mode)
 
+> **PARAMS format:** ใช้ `^|` เป็น separator, `ENV` ต้องเป็น `'dev'` เสมอ (ไม่ใช่ blank)
+> **PRCS_NM:** ตั้งชื่อให้สอดคล้องกับ table + data_date เพื่อ query log ได้ง่าย
+
 ```
-# Step 2.1 — Pre-validation: SOURCE_MOTOR
+# Step 2.1 — Pre-validation: SOURCE_MOTOR_DEVTEST  (ตัวอย่าง devtest)
 Notebook  : vrh_chv_pre_validation_v2
-PARAMS    : viriyah_cdqm_poc.silver.source_motor
-            ^|viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2_v2
-            ^|2026-01-05
-            ^|EDP_PRE_VLD_SOURCE_MOTOR
+PARAMS    : viriyah_cdqm_poc.silver.source_motor_devtest
+            ^|viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2
+            ^|2025-01-01
+            ^|EDP_PRE_VLD_MOTOR_DEVTEST
             ^|1
-            ^|EDP_PRE_VLD_SOURCE_MOTOR
+            ^|EDP_PRE_VLD_MOTOR_DEVTEST
             ^|1
 ENV       : dev
 
-# Step 2.2 — Pre-validation: TRUST_SOURCE
+# Step 2.2 — Pre-validation: TRUST_SOURCE_DEVTEST
 Notebook  : vrh_chv_pre_validation_v2
-PARAMS    : viriyah_cdqm_poc.silver.trust_source
-            ^|viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2_v2
-            ^|2026-01-05
-            ^|EDP_PRE_VLD_TRUST_SOURCE
+PARAMS    : viriyah_cdqm_poc.silver.trust_source_devtest
+            ^|viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2
+            ^|2025-01-01
+            ^|EDP_PRE_VLD_TRUST_DEVTEST
             ^|1
-            ^|EDP_PRE_VLD_TRUST_SOURCE
+            ^|EDP_PRE_VLD_TRUST_DEVTEST
             ^|1
 ENV       : dev
 
-# Step 2.3 — Matching
+# Step 2.3 — Matching: SOURCE_MOTOR_DEVTEST
 Notebook  : vrh_chv_match_v2
-PARAMS    : viriyah_cdqm_poc.silver.source_motor
-            ^|2026-01-05
-            ^|EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05
+PARAMS    : viriyah_cdqm_poc.silver.source_motor_devtest
+            ^|2025-01-01
+            ^|EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2025-01-01
             ^|1
-            ^|EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05
+            ^|EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2025-01-01
             ^|1
 ENV       : dev
 ```
+
+> **เปลี่ยน data_date:** แก้ `2025-01-01` → วันที่ต้องการ แล้วแก้ PRCS_NM ให้ตรงด้วย เช่น `EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2025-01-02`
 
 ---
 
@@ -379,7 +384,7 @@ VALUES
 ### LC-002: ลำดับการ run pipeline สำหรับ table ใหม่
 
 **วันที่:** 2026-02-26
-**Context:** รัน `vrh_chv_match_v2` โดยตรง → notebook SUCCESS แต่ไม่มีข้อมูลใน `chv_table_bkey_v2_v2`
+**Context:** รัน `vrh_chv_match_v2` โดยตรง → notebook SUCCESS แต่ไม่มีข้อมูลใน `chv_table_bkey_v2`
 
 **Root cause:** `vrh_chv_match_v2` join กับ `CHV_PRE_VALIDATION_RESULT_V2` ด้วย INNER JOIN → ถ้าไม่มี pre_val result จะได้ empty result โดยไม่มี error
 

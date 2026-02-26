@@ -65,7 +65,7 @@ vrh_cdmq_dev/
 
 ### 1. Download notebook from workspace
 ```bash
-source setup_env.sh
+export DATABRICKS_CONFIG_FILE=/home/khaw/ClaudeCode/vrh_cdmq_dev/.databrickscfg
 databricks workspace export /Workspace/Users/khachornpop@inteltion.com/vrh/<notebook> \
   --format SOURCE > notebooks/work/<notebook>.py
 ```
@@ -73,15 +73,49 @@ databricks workspace export /Workspace/Users/khachornpop@inteltion.com/vrh/<note
 ### 2. Edit locally
 Edit files in `notebooks/work/` using your IDE.
 
-### 3. Test locally
+### 3. Run on cluster (actual workflow)
+ไม่ได้ test locally ผ่าน venv — รันบน cluster โดยตรงผ่าน DatabricksSession หรือ jobs submit
+
+**วิธีที่ 1 — รัน notebook via WorkspaceClient (แนะนำสำหรับ pipeline run):**
+เขียน parameters ลงไฟล์ Python แล้วรันไฟล์นั้น เพื่อไม่ต้อง approve command ยาวๆ ทุกครั้ง:
+```python
+# scripts/run_<notebook>_<params>.py
+import sys
+sys.path.insert(0, '/home/khaw/ClaudeCode/databricks_dev_local')
+import os
+os.environ['DATABRICKS_CONFIG_FILE'] = '/home/khaw/ClaudeCode/vrh_cdmq_dev/.databrickscfg'
+
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.jobs import NotebookTask, RunTask
+
+CLUSTER_ID   = '<cluster_id>'
+NOTEBOOK     = '/Workspace/Users/khachornpop@inteltion.com/vrh/match_and_merge/<notebook>'
+PARAMS_STR   = '<table>^|<data_dt>^|<prcs_nm>^|1^|<prcs_nm>^|1'
+
+w = WorkspaceClient()
+run = w.jobs.submit(run_name='run', tasks=[RunTask(
+    task_key='t1',
+    existing_cluster_id=CLUSTER_ID,
+    notebook_task=NotebookTask(notebook_path=NOTEBOOK,
+                               base_parameters={'PARAMS': PARAMS_STR, 'ENV': 'dev'})
+)]).result()
+print(run.state.result_state)
+```
 ```bash
-source venv/bin/activate
-python3 tests/run_<notebook>.py
+source /home/khaw/ClaudeCode/databricks_dev_local/venv/bin/activate
+python3 scripts/run_<notebook>_<params>.py
+```
+
+**วิธีที่ 2 — รัน SQL โดยตรงบน cluster (สำหรับ investigation/debug):**
+```python
+from databricks.connect import DatabricksSession
+spark = DatabricksSession.builder.getOrCreate()
+spark.sql("SELECT ...")
 ```
 
 ### 4. Upload back to workspace
 ```bash
-source setup_env.sh
+export DATABRICKS_CONFIG_FILE=/home/khaw/ClaudeCode/vrh_cdmq_dev/.databrickscfg
 databricks workspace import --file notebooks/work/<notebook>.py \
   --language PYTHON --format SOURCE --overwrite \
   /Workspace/Users/khachornpop@inteltion.com/vrh/<notebook>
@@ -106,8 +140,8 @@ cp tests/TEMPLATE_run_notebook.py tests/run_my_notebook.py
 - **Magic commands** (`# MAGIC`, `# COMMAND ----------`, `# DBTITLE`) are stripped during local execution
 - **`safe_notebook_exit()`** works in both workspace and local environments
 - **Version control**: Keep previous notebook versions (e.g., `notebook_v1.py`, `v2.py`)
-- **Workflow จริง:** ไม่ได้ test locally ผ่าน venv — ใช้ `DatabricksSession` (databricks-connect) หรือ `databricks jobs submit` รันบน cluster โดยตรง
-- **venv สำหรับ DatabricksSession:** `/home/khaw/ClaudeCode/databricks_dev_local/venv`
+- **venv สำหรับ DatabricksSession / WorkspaceClient:** `/home/khaw/ClaudeCode/databricks_dev_local/venv`
+- **Run scripts:** เขียน parameters ลงไฟล์ใน `scripts/` แล้วรัน Python file แทนการพิมพ์ command ยาวๆ โดยตรง
 
 ## Common Commands
 
