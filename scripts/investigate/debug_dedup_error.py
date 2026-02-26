@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
-import os
+"""
+debug_dedup_error.py — ตรวจสอบ schema ของ chv_table_bkey_v2 และ chv_matching_log_v2
+
+Usage:
+    source /home/khaw/ClaudeCode/databricks_dev_local/venv/bin/activate
+    python3 scripts/investigate/debug_dedup_error.py
+"""
+import os, sys
+sys.path.insert(0, '/home/khaw/ClaudeCode/databricks_dev_local')
 os.environ['DATABRICKS_CONFIG_FILE'] = '/home/khaw/ClaudeCode/vrh_cdmq_dev/.databrickscfg'
+
 from databricks.connect import DatabricksSession
 spark = DatabricksSession.builder.getOrCreate()
 
-# Find which schema has chv_table_bkey_v2
 for schema in ['control_fw', 'silver']:
     try:
         cnt = spark.sql(f"SELECT COUNT(*) FROM viriyah_cdqm_poc.{schema}.chv_table_bkey_v2").collect()[0][0]
         print(f"viriyah_cdqm_poc.{schema}.chv_table_bkey_v2: EXISTS ({cnt} rows)")
-    except Exception as e:
+    except:
         print(f"viriyah_cdqm_poc.{schema}.chv_table_bkey_v2: NOT FOUND")
 
-# Also check chv_matching_log_v2
 for schema in ['control_fw', 'silver']:
     try:
         cnt = spark.sql(f"SELECT COUNT(*) FROM viriyah_cdqm_poc.{schema}.chv_matching_log_v2").collect()[0][0]

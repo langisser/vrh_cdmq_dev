@@ -1,5 +1,21 @@
+# Sensitive config
 .databrickscfg
+
+# Python environment / cache
 venv/
 __pycache__/
 *.log
 *.pyc
+
+# Source data files
+source/
+
+# Scripts — not business logic
+scripts/willdelete/
+scripts/investigate/
+
+# DDL / config setup notebooks
+notebooks/work/match_and_merge/insert_scripts/
+
+# Workspace mirror
+notebooks/mirror/
