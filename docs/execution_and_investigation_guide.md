@@ -343,3 +343,95 @@ STAGE               TABLE                          ดูอะไร
 ---
 
 *Guide generated from design discussion — 2026-02-21*
+
+---
+
+## Learning Cases — ปัญหาที่เจอระหว่าง setup devtest pipeline
+
+### LC-001: CHV_CONFIG_PRE_VALIDATION_V2 ต้องมี entry ก่อน run pre_validation
+
+**วันที่:** 2026-02-26
+**Symptom:** `vrh_chv_pre_validation_v2` fail ด้วย `RunLifeCycleState.INTERNAL_ERROR` แต่ไม่มี error trace
+
+**Root cause:** `CHV_CONFIG_PRE_VALIDATION_V2` ไม่มี row สำหรับ table ใหม่ → notebook ดึง config ออกมาเป็น empty DataFrame → fail ระหว่าง execute โดยไม่มี error message ชัดเจน
+
+**Fix:** INSERT config ก่อน run pre_validation เสมอ
+```sql
+INSERT INTO viriyah_cdqm_poc.control_fw.CHV_CONFIG_PRE_VALIDATION_V2
+  (TABLE, RULES, PARAMETER, CUSTOM_CONDITION, ACT_F)
+VALUES
+  ('viriyah_cdqm_poc.silver.<new_table>', 'CHECK_NULL', 'id_card', NULL, 1),
+  ('viriyah_cdqm_poc.silver.<new_table>', 'CHECK_NULL', 'fname',   NULL, 1),
+  ('viriyah_cdqm_poc.silver.<new_table>', 'CHECK_NULL', 'lname',   NULL, 1);
+```
+
+**Checklist สำหรับ table ใหม่ — ก่อน run pipeline:**
+| Config table | ตรวจอะไร |
+|---|---|
+| `CHV_CONFIG_PK_V2` | มี PK entry สำหรับ table ใหม่ |
+| `CHV_CONFIG_MATCHING_V2` | มี matching rules (MAIN_TABLE/MATCHING_TABLE/TIER/SUBJECT) |
+| `CHV_CONFIG_PRE_VALIDATION_V2` | **มี CHECK_NULL entry สำหรับทุก column ที่ใช้ใน matching** |
+| `CHV_CONFIG_CHECK_PRE_VALIDATION_V2` | มี CHECK_NULL entry ต่อ MATCHING_RULES (MAIN + MATCH side) |
+| `CHV_PARAM_GENERAL_V2` | มี DATE lag = 0 สำหรับ table ใหม่ |
+
+---
+
+### LC-002: ลำดับการ run pipeline สำหรับ table ใหม่
+
+**วันที่:** 2026-02-26
+**Context:** รัน `vrh_chv_match_v2` โดยตรง → notebook SUCCESS แต่ไม่มีข้อมูลใน `chv_table_bkey_v2`
+
+**Root cause:** `vrh_chv_match_v2` join กับ `CHV_PRE_VALIDATION_RESULT_V2` ด้วย INNER JOIN → ถ้าไม่มี pre_val result จะได้ empty result โดยไม่มี error
+
+**ลำดับที่ถูกต้อง:**
+```
+1. vrh_chv_pre_validation_v2  ← run สำหรับ MAIN table
+2. vrh_chv_pre_validation_v2  ← run สำหรับ MATCHING table (ถ้าต่างกัน)
+3. vrh_chv_match_v2           ← run หลัง pre_val ครบทุก table
+```
+
+**PARAMS format:**
+```
+# pre_validation_v2 (7 params):
+<table>^|<vld_result_table>^|<data_dt>^|<prcs_nm>^|<ld_id>^|<updt_prcs_nm>^|<updt_ld_id>
+
+# match_v2 (6 params):
+<table>^|<data_dt>^|<prcs_nm>^|<ld_id>^|<updt_prcs_nm>^|<updt_ld_id>
+
+# ENV: ใช้ 'dev' เสมอ (ไม่ใช่ '' หรือ blank)
+```
+
+---
+
+### LC-003: วิธี run notebook บน Databricks โดยไม่ต้อง upload ไฟล์
+
+**วันที่:** 2026-02-26
+**Pattern:** ใช้ `databricks.sdk` + `DatabricksSession` จาก local machine รัน code บน cluster โดยตรง
+
+```python
+# รัน notebook บน cluster (ไม่ต้อง upload)
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.jobs import NotebookTask, RunTask
+
+w = WorkspaceClient()
+run = w.jobs.submit(
+    run_name='my_run',
+    tasks=[RunTask(
+        task_key='task1',
+        existing_cluster_id='<cluster_id>',
+        notebook_task=NotebookTask(
+            notebook_path='/Workspace/Users/.../notebook',
+            base_parameters={'PARAMS': '...', 'ENV': 'dev'}
+        )
+    )]
+).result()  # blocks จน job เสร็จ
+print(run.state.result_state)
+
+# รัน SQL/code โดยตรงบน cluster (ไม่ต้องผ่าน notebook)
+from databricks.connect import DatabricksSession
+spark = DatabricksSession.builder.getOrCreate()
+spark.sql("SELECT ...")
+```
+
+**venv ที่ใช้:** `/home/khaw/ClaudeCode/databricks_dev_local/venv`
+**config file:** `/home/khaw/ClaudeCode/vrh_cdmq_dev/.databrickscfg`
