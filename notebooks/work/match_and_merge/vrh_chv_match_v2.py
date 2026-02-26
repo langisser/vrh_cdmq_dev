@@ -147,8 +147,6 @@ general_param = spark.sql(f"select * from {catalog}.{fw_schema}.CHV_PARAM_GENERA
 
 # COMMAND ----------
 
-# Track which main keys have been matched in any previous tier
-matched_keys = set()
 # Accumulate per-tier matching log DataFrames
 all_log_dfs = []
 
@@ -225,14 +223,9 @@ for tier_idx, tier in enumerate(tier_values):
         sub_main_sql += main_vld_sql
         sub_main_sql += f"WHERE SRC.DATA_DT = DATE_FORMAT(DATE_ADD(TO_DATE('%DATA_DT%','yyyy-MM-dd'),{general_param.filter(lower(col('PARAM_NAME')) == table.lower()).collect()[0].PARAM_VAL_NUMBER}),'yyyy-MM-dd')"
 
-        # --- TIER exclusion filter ---
-        # From Tier 2 onwards, exclude keys already matched in previous tiers
-        if tier_idx > 0 and matched_keys:
-            keys_str = "','".join(str(k) for k in matched_keys)
-            sub_main_sql += f"\nAND CONCAT_WS(',',{main_key}) NOT IN ('{keys_str}')"
-        elif tier_idx > 0 and not matched_keys:
-            # No keys were matched in previous tiers; no filter needed
-            pass
+        # --- TIER exclusion removed ---
+        # All keys enter every tier regardless of previous tier matches
+        # BKEY consolidation is handled downstream via Union-Find
 
         from_sql_parts.append(sub_main_sql)
         inner_sql.append(sub_sql)
@@ -257,15 +250,10 @@ for tier_idx, tier in enumerate(tier_values):
 
     tier_df = spark.sql(tier_sql)
 
-    # Collect main keys that PASSED in this tier → exclude from next tier
     tier_passed = tier_df.filter("RESULT = 'PASSED'")
-    matched_this_tier = set(
-        row['KEY_MAIN'] for row in tier_passed.select('KEY_MAIN').distinct().collect()
-    )
-    print(f"Tier {tier}: {len(matched_this_tier)} keys matched")
+    print(f"Tier {tier}: {tier_passed.count()} pairs matched")
 
     all_log_dfs.append(tier_df)
-    matched_keys |= matched_this_tier
 
 # COMMAND ----------
 

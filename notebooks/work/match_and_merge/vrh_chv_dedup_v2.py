@@ -296,7 +296,7 @@ dedup_name = spark.sql("""
         lname,
         prefix,
         MAX(update_date)         AS update_date,
-        collect_list(policy_key) AS policy_keys
+        collect_list(policy_key) AS rec_keyvalue
     FROM base_df
     GROUP BY bkey, id_card, fname, lname, prefix
 """)
@@ -323,7 +323,7 @@ dedup_province = spark.sql("""
         postcode,
         province,
         MAX(update_date)         AS update_date,
-        collect_list(policy_key) AS policy_keys
+        collect_list(policy_key) AS rec_keyvalue
     FROM base_df
     GROUP BY bkey, id_card, area, district, postcode, province
 """)
@@ -348,7 +348,7 @@ dedup_gender = spark.sql("""
         gender,
         birth_date,
         MAX(update_date)         AS update_date,
-        collect_list(policy_key) AS policy_keys
+        collect_list(policy_key) AS rec_keyvalue
     FROM base_df
     GROUP BY bkey, id_card, gender, birth_date
 """)
@@ -372,7 +372,7 @@ dedup_email = spark.sql("""
         id_card,
         email,
         MAX(update_date)         AS update_date,
-        collect_list(policy_key) AS policy_keys
+        collect_list(policy_key) AS rec_keyvalue
     FROM base_df
     GROUP BY bkey, id_card, email
 """)
@@ -396,7 +396,7 @@ dedup_phone = spark.sql("""
         id_card,
         phone,
         MAX(update_date)         AS update_date,
-        collect_list(policy_key) AS policy_keys
+        collect_list(policy_key) AS rec_keyvalue
     FROM base_df
     GROUP BY bkey, id_card, phone
 """)
