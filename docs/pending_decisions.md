@@ -1,7 +1,7 @@
 # Pending Decisions & Known Issues
 **Project:** vrh — CHV Match & Merge Pipeline
 **Last Updated:** 2026-02-22
-**Status:** Issue 1 & 4 Resolved, Issue 2 & 3 Pending
+**Status:** All Issues Resolved ✅
 
 ---
 
@@ -37,10 +37,22 @@
 
 ---
 
-## Issue 2 — Levenshtein Threshold สำหรับ ID Card `[PENDING]`
+## Issue 2 — Levenshtein Threshold สำหรับ ID Card `[RESOLVED ✅]`
 
 **ค้นพบจาก:** SCN03, SCN04, SCN05
 **SCN04/05 Result:** FAIL
+**Confirmed:** 2026-02-26
+
+### Decision
+
+> **ใช้ Option A — Exact match**
+> `MAIN.Ident_card = MATCH.Id_card`
+> เลขบัตรประชาชนต่างกัน 1 หลัก = คนละคน ไม่ใช่ typo
+
+### Dev Impact
+
+- แก้ `chv_config_matching_v2` rule 1, 6, 11 — เปลี่ยน `MATCH_CONDITION` จาก `levenshtein(...) <= 2` เป็น `= `
+- QA ปรับ expected: testcase ที่ ID ต่างกัน 1-2 หลักแล้ว expect PASS → เปลี่ยนเป็น FAIL
 
 ### ปัญหา
 
@@ -84,25 +96,21 @@ levenshtein(MAIN.Ident_card, MATCH.Id_card) <= 2   weight 1.0
 
 ---
 
-## Issue 3 — Unmatched MATCHING table records `[KNOWN ISSUE]`
+## Issue 3 — Unmatched MATCHING table records `[RESOLVED ✅]`
 
 **ค้นพบจาก:** design_chv_v2.md section 9 (Known Limitations)
+**Confirmed:** 2026-02-26
 
-### ปัญหา
+### Decision
 
-`not_pass_post` query (records ที่ไม่ match ใคร) cover เฉพาะ **MAIN table** เท่านั้น
-Records ใน MATCHING table ที่ไม่มีใคร match มาหา จะ **ไม่ได้รับ BKEY** ในรอบนี้
+> **TRUST_SOURCE รันเป็น MAIN table ด้วย**
+> ปัญหานี้ถูก handle โดย pipeline เอง — TRUST_SOURCE records ที่ไม่มีใคร match มาหา
+> จะได้ BKEY เมื่อรัน pipeline โดยให้ TRUST_SOURCE เป็น MAIN table
 
-**ตัวอย่าง:**
-ถ้า TRUST_SOURCE มี record `44444444444` ที่ไม่มีใครใน SOURCE_MOTOR match มาหาเลย
-→ `44444444444` จะไม่มี BKEY จนกว่าจะรัน pipeline โดยให้ TRUST_SOURCE เป็น MAIN table
+### Dev Impact
 
-### คำถามสำหรับ Business User
-
-> **"TRUST_SOURCE จะถูกรันเป็น MAIN table ด้วยมั้ย? หรือทำหน้าที่เป็น reference table เท่านั้น?"**
-
-- ถ้า TRUST_SOURCE รันเป็น MAIN ด้วย → ปัญหานี้ถูก handle โดย pipeline เอง
-- ถ้า TRUST_SOURCE เป็น reference เท่านั้น → ต้องเพิ่ม logic assign BKEY ให้ unmatched MATCHING records
+- Config รอบ TRUST_SOURCE as MAIN: `chv_config_matching_v2` rules 11–15 (MAIN=TRUST_SOURCE → MATCHING=SOURCE_MOTOR, TIER=1) มีอยู่แล้ว
+- ไม่ต้องเพิ่ม logic ใดๆ ใน notebook
 
 ---
 
@@ -200,13 +208,13 @@ GROUP BY b.bkey, s.id_card, s.fname, s.lname, s.prefix
 | # | Issue | Owner | Priority | Status |
 |---|---|---|---|---|
 | 1 | Pre-validation gate: strict vs score-based | Business User | High | ✅ Resolved — Option B |
-| 2 | ID card matching: exact vs levenshtein | Business User | High | ⏳ Pending |
-| 3 | Unmatched MATCHING table BKEY | Business User | Medium | ⏳ Pending |
+| 2 | ID card matching: exact vs levenshtein | Business User | High | ✅ Resolved — Option A (exact match) |
+| 3 | Unmatched MATCHING table BKEY | Business User | Medium | ✅ Resolved — TRUST_SOURCE runs as MAIN |
 | 4 | Source-to-source match (8410 ↔ 8420) | Business User | Medium | ✅ Resolved — ยอมรับได้ |
 | 5 | Dedup output tables (post-BKEY merge layer) | Business User | Medium | ✅ Confirmed — all open questions resolved |
 
 ---
 
 *Document created: 2026-02-22*
-*Last updated: 2026-02-26 — Issue 5 all open questions resolved*
+*Last updated: 2026-02-26 — All issues resolved. Issue 2: exact match, Issue 3: TRUST_SOURCE runs as MAIN*
 *Based on analysis of SCN03, SCN04, SCN05 test results and code review of `vrh_chv_match_v2.py`*
