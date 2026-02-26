@@ -203,10 +203,10 @@ GROUP BY b.bkey, s.id_card, s.fname, s.lname, s.prefix
 | 2 | ID card matching: exact vs levenshtein | Business User | High | ⏳ Pending |
 | 3 | Unmatched MATCHING table BKEY | Business User | Medium | ⏳ Pending |
 | 4 | Source-to-source match (8410 ↔ 8420) | Business User | Medium | ✅ Resolved — ยอมรับได้ |
-| 5 | Dedup output tables (post-BKEY merge layer) | Business User | Medium | ✅ Confirmed — pending 3 open questions |
+| 5 | Dedup output tables (post-BKEY merge layer) | Business User | Medium | ✅ Confirmed — all open questions resolved |
 
 ---
 
 *Document created: 2026-02-22*
-*Last updated: 2026-02-26 — Issue 5 confirmed with decisions, 3 open questions remaining*
+*Last updated: 2026-02-26 — Issue 5 all open questions resolved*
 *Based on analysis of SCN03, SCN04, SCN05 test results and code review of `vrh_chv_match_v2.py`*

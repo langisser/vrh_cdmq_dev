@@ -8,13 +8,13 @@
 ## Overview — Execution Flow
 
 ```
-vrh_chv_main
+vrh_chv_main_v2
     │
-    ├── [1] vrh_chv_pre_validation  ← run for SOURCE_MOTOR
-    ├── [2] vrh_chv_pre_validation  ← run for TRUST_SOURCE
+    ├── [1] vrh_chv_pre_validation_v2  ← run for SOURCE_MOTOR
+    ├── [2] vrh_chv_pre_validation_v2  ← run for TRUST_SOURCE
     │         (one run per unique MATCHING_TABLE in config)
     │
-    └── [3] vrh_chv_match           ← run for SOURCE_MOTOR
+    └── [3] vrh_chv_match_v2           ← run for SOURCE_MOTOR
 ```
 
 ---
@@ -36,27 +36,27 @@ Matching       : EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05
 
 ## Step 2 — Execution
 
-### Option A: Run ผ่าน vrh_chv_main (แนะนำ)
+### Option A: Run ผ่าน vrh_chv_main_v2 (แนะนำ)
 
 ```
-Notebook  : /Workspace/Users/.../vrh/vrh_chv_main
+Notebook  : /Workspace/Users/.../vrh/match_and_merge/vrh_chv_main_v2
 Parameters:
   table_name = SOURCE_MOTOR
   data_date  = 2026-01-05
 ```
 
-vrh_chv_main จะ:
-1. Query `chv_config_matching` หา MATCHING_TABLE ทุกตัว
-2. Run `vrh_chv_pre_validation` ให้ทุกตาราง (SOURCE_MOTOR + TRUST_SOURCE)
-3. Run `vrh_chv_match` สำหรับ SOURCE_MOTOR
+vrh_chv_main_v2 จะ:
+1. Query `chv_config_matching_v2` หา MATCHING_TABLE ทุกตัว
+2. Run `vrh_chv_pre_validation_v2` ให้ทุกตาราง (SOURCE_MOTOR + TRUST_SOURCE)
+3. Run `vrh_chv_match_v2` สำหรับ SOURCE_MOTOR
 
 ### Option B: Run ทีละ notebook (debug mode)
 
 ```
 # Step 2.1 — Pre-validation: SOURCE_MOTOR
-Notebook  : vrh_chv_pre_validation
-PARAMS    : viriyah_cdqm_poc.silver.SOURCE_MOTOR
-            ^|viriyah_cdqm_poc.control_fw.CHV_PRE_VALIDATION_RESULT
+Notebook  : vrh_chv_pre_validation_v2
+PARAMS    : viriyah_cdqm_poc.silver.source_motor
+            ^|viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2_v2
             ^|2026-01-05
             ^|EDP_PRE_VLD_SOURCE_MOTOR
             ^|1
@@ -65,9 +65,9 @@ PARAMS    : viriyah_cdqm_poc.silver.SOURCE_MOTOR
 ENV       : dev
 
 # Step 2.2 — Pre-validation: TRUST_SOURCE
-Notebook  : vrh_chv_pre_validation
-PARAMS    : viriyah_cdqm_poc.silver.TRUST_SOURCE
-            ^|viriyah_cdqm_poc.control_fw.CHV_PRE_VALIDATION_RESULT
+Notebook  : vrh_chv_pre_validation_v2
+PARAMS    : viriyah_cdqm_poc.silver.trust_source
+            ^|viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2_v2
             ^|2026-01-05
             ^|EDP_PRE_VLD_TRUST_SOURCE
             ^|1
@@ -76,12 +76,12 @@ PARAMS    : viriyah_cdqm_poc.silver.TRUST_SOURCE
 ENV       : dev
 
 # Step 2.3 — Matching
-Notebook  : vrh_chv_match
-PARAMS    : viriyah_cdqm_poc.silver.SOURCE_MOTOR
+Notebook  : vrh_chv_match_v2
+PARAMS    : viriyah_cdqm_poc.silver.source_motor
             ^|2026-01-05
-            ^|EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05
+            ^|EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05
             ^|1
-            ^|EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05
+            ^|EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05
             ^|1
 ENV       : dev
 ```
@@ -98,7 +98,7 @@ SELECT
     TABLE,
     RESULT,
     COUNT(*) AS CNT
-FROM viriyah_cdqm_poc.control_fw.chv_pre_validation_result
+FROM viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2
 WHERE DATA_DT  = '2026-01-05'
   AND PRCS_NM LIKE 'EDP_PRE_VLD_%'
 GROUP BY TABLE, RESULT
@@ -114,7 +114,7 @@ SELECT
     COLUMN,
     VALUE,
     RESULT
-FROM viriyah_cdqm_poc.control_fw.chv_pre_validation_result
+FROM viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2
 WHERE DATA_DT = '2026-01-05'
   AND RESULT  = 'FAILED'
 ORDER BY TABLE, KEY;
@@ -134,7 +134,7 @@ SELECT
     MATCHING_RULES,
     RESULT,
     COUNT(*) AS CNT
-FROM viriyah_cdqm_poc.control_fw.chv_matching_log
+FROM viriyah_cdqm_poc.control_fw.chv_matching_log_v2
 WHERE DATA_DT = '2026-01-05'
   AND PRCS_NM = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
 GROUP BY MAIN_TABLE, MATCHING_TABLE, MATCHING_RULES, RESULT
@@ -150,7 +150,7 @@ SELECT
     KEY_MAIN,
     KEY_MATCH,
     RESULT
-FROM viriyah_cdqm_poc.control_fw.chv_matching_log
+FROM viriyah_cdqm_poc.control_fw.chv_matching_log_v2
 WHERE DATA_DT  = '2026-01-05'
   AND PRCS_NM  = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
   AND RESULT   = 'PASSED'
@@ -160,7 +160,7 @@ ORDER BY KEY_MAIN, MATCHING_RULES;
 **ดู record ที่ไม่ match กับ rule ไหนเลย**
 ```sql
 SELECT DISTINCT KEY_MAIN
-FROM viriyah_cdqm_poc.control_fw.chv_matching_log
+FROM viriyah_cdqm_poc.control_fw.chv_matching_log_v2
 WHERE DATA_DT = '2026-01-05'
   AND PRCS_NM = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
   AND RESULT  = 'FAILED'
@@ -168,7 +168,7 @@ WHERE DATA_DT = '2026-01-05'
 EXCEPT
 
 SELECT DISTINCT KEY_MAIN
-FROM viriyah_cdqm_poc.control_fw.chv_matching_log
+FROM viriyah_cdqm_poc.control_fw.chv_matching_log_v2
 WHERE DATA_DT = '2026-01-05'
   AND PRCS_NM = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
   AND RESULT  = 'PASSED';
@@ -185,7 +185,7 @@ SELECT
     MATCHING_TABLE,
     KEY_MAIN,
     KEY_MATCH
-FROM viriyah_cdqm_poc.control_fw.chv_matching_result
+FROM viriyah_cdqm_poc.control_fw.chv_matching_result_v2
 WHERE DATA_DT = '2026-01-05'
   AND PRCS_NM = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
 ORDER BY KEY_MAIN;
@@ -194,7 +194,7 @@ ORDER BY KEY_MAIN;
 **ตรวจ record ที่ match กับ TRUST_SOURCE (identity)**
 ```sql
 SELECT KEY_MAIN, KEY_MATCH
-FROM viriyah_cdqm_poc.control_fw.chv_matching_result
+FROM viriyah_cdqm_poc.control_fw.chv_matching_result_v2
 WHERE DATA_DT          = '2026-01-05'
   AND PRCS_NM          = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
   AND LOWER(MAIN_TABLE)     = 'viriyah_cdqm_poc.silver.source_motor'
@@ -204,7 +204,7 @@ WHERE DATA_DT          = '2026-01-05'
 **ตรวจ record ที่ match กับ SOURCE_MOTOR เอง (self-dedup)**
 ```sql
 SELECT KEY_MAIN, KEY_MATCH
-FROM viriyah_cdqm_poc.control_fw.chv_matching_result
+FROM viriyah_cdqm_poc.control_fw.chv_matching_result_v2
 WHERE DATA_DT          = '2026-01-05'
   AND PRCS_NM          = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
   AND LOWER(MAIN_TABLE)     = 'viriyah_cdqm_poc.silver.source_motor'
@@ -217,8 +217,8 @@ SELECT
     a.KEY_MAIN,
     a.MATCHING_TABLE AS matched_trust,
     b.MATCHING_TABLE AS matched_self
-FROM viriyah_cdqm_poc.control_fw.chv_matching_result a
-JOIN viriyah_cdqm_poc.control_fw.chv_matching_result b
+FROM viriyah_cdqm_poc.control_fw.chv_matching_result_v2 a
+JOIN viriyah_cdqm_poc.control_fw.chv_matching_result_v2 b
   ON a.KEY_MAIN = b.KEY_MAIN
   AND a.DATA_DT = b.DATA_DT
   AND a.PRCS_NM = b.PRCS_NM
@@ -238,20 +238,20 @@ SELECT
     TABLE,
     KEY,
     BKEY
-FROM viriyah_cdqm_poc.silver.chv_table_bkey
+FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2
 WHERE DATA_DT = '2026-01-05'
   AND PRCS_NM = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
 ORDER BY BKEY, TABLE;
 ```
 
-**ตรวจ record ที่ได้ BKEY มากกว่า 1 (dual-bkey problem)**
+**ตรวจ record ที่ได้ BKEY มากกว่า 1 (expect 0 rows)**
 ```sql
 SELECT
     KEY,
     TABLE,
     COUNT(DISTINCT BKEY) AS bkey_count,
     COLLECT_LIST(BKEY)   AS bkeys
-FROM viriyah_cdqm_poc.silver.chv_table_bkey
+FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2
 WHERE DATA_DT = '2026-01-05'
   AND PRCS_NM = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
 GROUP BY KEY, TABLE
@@ -264,7 +264,7 @@ SELECT
     b.BKEY,
     b.TABLE,
     b.KEY
-FROM viriyah_cdqm_poc.silver.chv_table_bkey b
+FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2 b
 WHERE DATA_DT = '2026-01-05'
   AND PRCS_NM = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
 ORDER BY BKEY, TABLE;
@@ -273,12 +273,12 @@ ORDER BY BKEY, TABLE;
 **ตรวจ SOURCE_MOTOR ที่ไม่มี BKEY จาก TRUST_SOURCE (ไม่ได้ match trust_source)**
 ```sql
 SELECT b.KEY, b.BKEY
-FROM viriyah_cdqm_poc.silver.chv_table_bkey b
+FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2 b
 WHERE b.DATA_DT         = '2026-01-05'
   AND b.PRCS_NM         = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
   AND LOWER(b.TABLE)    = 'viriyah_cdqm_poc.silver.source_motor'
   AND NOT EXISTS (
-      SELECT 1 FROM viriyah_cdqm_poc.silver.chv_table_bkey b2
+      SELECT 1 FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2 b2
       WHERE b2.BKEY     = b.BKEY
         AND b2.DATA_DT  = b.DATA_DT
         AND LOWER(b2.TABLE) = 'viriyah_cdqm_poc.silver.trust_source'
@@ -300,28 +300,28 @@ DECLARE OR REPLACE VARIABLE v_table  STRING DEFAULT 'viriyah_cdqm_poc.silver.sou
 
 -- [1] Pre-validation summary
 SELECT 'PRE_VALIDATION' AS STAGE, TABLE, RESULT, COUNT(*) AS CNT
-FROM viriyah_cdqm_poc.control_fw.chv_pre_validation_result
+FROM viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2
 WHERE DATA_DT = v_dt GROUP BY TABLE, RESULT
 
 UNION ALL
 
 -- [2] Matching log summary
 SELECT 'MATCHING_LOG' AS STAGE, MAIN_TABLE AS TABLE, RESULT, COUNT(*) AS CNT
-FROM viriyah_cdqm_poc.control_fw.chv_matching_log
+FROM viriyah_cdqm_poc.control_fw.chv_matching_log_v2
 WHERE DATA_DT = v_dt AND PRCS_NM = v_prcs GROUP BY MAIN_TABLE, RESULT
 
 UNION ALL
 
 -- [3] Matched pairs count
 SELECT 'MATCHING_RESULT' AS STAGE, MATCHING_TABLE AS TABLE, 'MATCHED' AS RESULT, COUNT(*) AS CNT
-FROM viriyah_cdqm_poc.control_fw.chv_matching_result
+FROM viriyah_cdqm_poc.control_fw.chv_matching_result_v2
 WHERE DATA_DT = v_dt AND PRCS_NM = v_prcs GROUP BY MATCHING_TABLE
 
 UNION ALL
 
 -- [4] BKEY summary
 SELECT 'BKEY' AS STAGE, TABLE, 'ASSIGNED' AS RESULT, COUNT(*) AS CNT
-FROM viriyah_cdqm_poc.silver.chv_table_bkey
+FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2
 WHERE DATA_DT = v_dt AND PRCS_NM = v_prcs GROUP BY TABLE
 
 ORDER BY STAGE, TABLE;
@@ -334,10 +334,10 @@ ORDER BY STAGE, TABLE;
 ```
 STAGE               TABLE                          ดูอะไร
 ────────────────────────────────────────────────────────────────────
-[1] Pre-validation  chv_pre_validation_result      record FAILED ก่อน matching
-[2] Raw match       chv_matching_log               แต่ละ rule match ได้กี่คู่
-[3] Passed pairs    chv_matching_result            คู่ที่ผ่าน weight threshold
-[4] BKEY output     chv_table_bkey                 BKEY ที่ assign จริง + dual-bkey check
+[1] Pre-validation  chv_pre_validation_result_v2      record FAILED ก่อน matching
+[2] Raw match       chv_matching_log_v2               แต่ละ rule match ได้กี่คู่
+[3] Passed pairs    chv_matching_result_v2            คู่ที่ผ่าน weight threshold
+[4] BKEY output     chv_table_bkey_v2                 BKEY ที่ assign จริง
 ```
 
 ---
@@ -379,7 +379,7 @@ VALUES
 ### LC-002: ลำดับการ run pipeline สำหรับ table ใหม่
 
 **วันที่:** 2026-02-26
-**Context:** รัน `vrh_chv_match_v2` โดยตรง → notebook SUCCESS แต่ไม่มีข้อมูลใน `chv_table_bkey_v2`
+**Context:** รัน `vrh_chv_match_v2` โดยตรง → notebook SUCCESS แต่ไม่มีข้อมูลใน `chv_table_bkey_v2_v2`
 
 **Root cause:** `vrh_chv_match_v2` join กับ `CHV_PRE_VALIDATION_RESULT_V2` ด้วย INNER JOIN → ถ้าไม่มี pre_val result จะได้ empty result โดยไม่มี error
 

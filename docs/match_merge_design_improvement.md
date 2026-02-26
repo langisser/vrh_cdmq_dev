@@ -4,6 +4,10 @@
 **Date:** 2026-02-20
 **Scope:** `chv_config_matching` / `vrh_chv_match.py`
 
+> **Status: IMPLEMENTED ✅ (2026-02-26)**
+> ปัญหาทั้งหมดในเอกสารนี้ได้รับการแก้ไขแล้วใน `vrh_chv_match_v2.py` และ `_v2` tables
+> เอกสารนี้เก็บไว้เป็น historical reference ของ design decision ก่อน implement
+
 ---
 
 ## 1. สรุปปัญหาที่พบ (Current Issues)

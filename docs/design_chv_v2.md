@@ -17,7 +17,7 @@ Record `3500900059524` (SOURCE_MOTOR, Fname=วิริยะ, Lname=สุข�
 - Matches TRUST_SOURCE `1234567880099` via name+DoB → BKEY = A
 - Also matches SOURCE_MOTOR `1234567880099` rows via name+DoB → BKEY = B
 
-Result: the same person ends up with 2 BKEYs in `chv_table_bkey` — data inconsistency.
+Result: the same person ends up with 2 BKEYs in `chv_table_bkey_v2` — data inconsistency.
 
 ### 1.2 No Grouping Dimension (SUBJECT)
 
@@ -158,6 +158,18 @@ Unmatched records (`not_pass_post`) receive `SUBJECT = 'default'` via `lit('defa
 
 `table_s` and `bkey_dict` keys are normalised to lowercase (`.lower()`). The `find_related_records` call and `not_pass_post` TABLE literal also use `.lower()` to ensure consistent lookup. Without this, tables with mixed-case names (e.g. `SOURCE_MOTOR`) would fail graph traversal silently, producing an empty bkey table.
 
+### Union-Find BKEY assignment (Bug Fix — 2026-02-26)
+
+Phase 3 (BKEY integer assignment) was replaced with a **Union-Find algorithm** to fix 3 bugs:
+
+1. **Type inconsistency** — MATCHING_TABLE path stored `str(bkey)` instead of `[str(bkey)]` → Phase 4 loop iterated characters instead of BKEY values.
+2. **Conflict not merged** — when both keys already had different BKEYs, original code detected the conflict but did not merge → same KEY got multiple BKEYs.
+3. **Dual-path overlap** — keys appearing only as KEY_MATCH (never KEY_MAIN) were included in both `gen_bkey_rs` and `not_pass_post` paths → duplicate BKEYs.
+
+**Fix:** All matched pairs are unioned into connected components via Union-Find. One BKEY integer is assigned per component. `not_pass_post` is anti-joined against `gen_bkey_rs` before the final union to prevent overlap.
+
+**Result:** 0 duplicate BKEYs per KEY. All transitively-connected keys share exactly one BKEY.
+
 ---
 
 ## 7. Comparison with v1
@@ -165,7 +177,7 @@ Unmatched records (`not_pass_post`) receive `SUBJECT = 'default'` via `lit('defa
 | Behaviour | v1 (original) | v2 (TIER + SUBJECT) |
 |---|---|---|
 | Matching | All rules in one SQL pass | Tier-by-tier, cascading exclusion |
-| Dual-BKEY | Possible when record matches multiple rule groups | Eliminated — each record matched in at most 1 tier |
+| Dual-BKEY | Possible when record matches multiple rule groups | Eliminated — by TIER exclusion (at most 1 tier per record) + Union-Find merge (connected components share one BKEY) |
 | SUBJECT | Not present | Carried from config → bkey |
 | Tables | Original | `_v2` suffix (parallel, non-destructive) |
 | Config | `chv_config_matching` | `chv_config_matching_v2` + TIER + SUBJECT columns |
