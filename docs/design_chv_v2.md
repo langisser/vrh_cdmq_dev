@@ -32,11 +32,11 @@ The original pipeline has no way to label *why* two records were grouped togethe
 Rules in `chv_config_matching` are assigned a **TIER** (integer). The matching engine processes tiers in ascending order:
 
 1. **Tier 1** runs against all eligible records.
-2. Records that produce a PASSED result in Tier 1 are collected into a `matched_keys` set.
-3. **Tier 2** runs only against records **not in** `matched_keys` — they are excluded via a `NOT IN` filter on the main sub-query.
-4. This continues for each subsequent tier.
+2. **Tier 2** runs against all eligible records (same as Tier 1 — no SQL-level exclusion).
+3. This continues for each subsequent tier.
+4. After all tiers complete, **Union-Find** merges all matched pairs into connected components — ensuring each record receives exactly one BKEY regardless of how many tiers it appeared in.
 
-**Effect:** A record can only be matched in **one tier**. It is impossible for the same record to appear in both Tier 1 and Tier 2 results, eliminating the dual-BKEY problem.
+**Effect:** A record may appear in multiple tiers, but Union-Find guarantees all transitively-connected keys share exactly one BKEY — eliminating the dual-BKEY problem at the BKEY assignment phase.
 
 ### 2.2 SUBJECT — Grouping Label
 
@@ -64,7 +64,7 @@ Records that do not match in any tier (unmatched) receive `SUBJECT = 'default'`.
 | 6–10 | SOURCE_MOTOR | SOURCE_MOTOR | 2 | identity |
 | 11–15 | TRUST_SOURCE | SOURCE_MOTOR | 1 | identity |
 
-**Key design decision:** SOURCE_MOTOR → TRUST_SOURCE is Tier 1 (higher priority). SOURCE_MOTOR self-match is Tier 2. Any SOURCE_MOTOR record that finds a match in TRUST_SOURCE will never be re-matched against other SOURCE_MOTOR records.
+**Key design decision:** SOURCE_MOTOR → TRUST_SOURCE is Tier 1 (higher priority). SOURCE_MOTOR self-match is Tier 2. All tiers run against the full eligible record set — records may appear in both tiers. Union-Find (Phase 3) merges all connected keys into one BKEY regardless of how many tiers they appeared in.
 
 ---
 
@@ -124,51 +124,101 @@ vrh_chv_main_v2
 ## 5. TIER Loop — Implementation Detail
 
 ```
-matched_keys = {}   # keys matched in previous tiers
-
 for each tier in [1, 2, ...]:
     tier_config = config rows where TIER = current tier
 
     build SQL:
         MAIN sub-query  → source table records (filtered by pre-validation PASSED)
-                        → if tier > 1: add WHERE KEY NOT IN (matched_keys)
         MATCH sub-query → matching table records (filtered by pre-validation PASSED)
         JOIN            → on matching condition (levenshtein, exact, etc.)
 
     run SQL → tier_df
 
-    collect PASSED keys from tier_df → add to matched_keys
-
 accumulate all tier_df → write to chv_matching_log_v2
+
+Phase 3 (BKEY assignment):
+    collect all matched pairs from all tiers
+    run Union-Find → one BKEY per connected component
+    anti-join not_pass_post against gen_bkey_rs to prevent overlap
 ```
 
-The `NOT IN (matched_keys)` filter is injected per rule inside the MAIN sub-query, ensuring records matched in Tier 1 cannot appear as MAIN in Tier 2.
+All tiers run independently against the full eligible record set. Deduplication is handled downstream by Union-Find — not by SQL-level exclusion between tiers.
 
 ---
 
-## 6. BKEY Generation — Key Changes
+## 6. BKEY Generation — Implementation Detail
 
-### SUBJECT propagation
+### Phase Overview
 
-`gen_bkey_filter` (pairs with no existing BKEY) carries the SUBJECT column from `chv_matching_result_v2`. A `subject_map` dict `(table, key) → SUBJECT` is built from this data and used when constructing the final `bkey_df`.
+BKEY generation in `vrh_chv_match_v2` has 4 phases:
 
-Unmatched records (`not_pass_post`) receive `SUBJECT = 'default'` via `lit('default')`.
+| Phase | What it does |
+|---|---|
+| **Phase 1** | Look up existing BKEYs from previous runs (`bkey_exists_rs`) — keys already in `chv_table_bkey_v2` |
+| **Phase 2** | Recursive graph traversal — follow matched pairs transitively to find all connected keys (`gen_bkey`) |
+| **Phase 3** | Union-Find BKEY assignment — assign one BKEY integer per connected component (`gen_bkey_rs`) |
+| **Phase 4** | Build final output — loop `bkey_dict`, attach SUBJECT, union all paths, write to `chv_table_bkey_v2` |
 
-### Case sensitivity fix
+---
 
-`table_s` and `bkey_dict` keys are normalised to lowercase (`.lower()`). The `find_related_records` call and `not_pass_post` TABLE literal also use `.lower()` to ensure consistent lookup. Without this, tables with mixed-case names (e.g. `SOURCE_MOTOR`) would fail graph traversal silently, producing an empty bkey table.
+### Phase 3: Union-Find Algorithm
 
-### Union-Find BKEY assignment (Bug Fix — 2026-02-26)
+All matched pairs from all tiers are collected and unioned into **connected components**. One BKEY integer is assigned per component. All transitively-connected keys share exactly one BKEY.
 
-Phase 3 (BKEY integer assignment) was replaced with a **Union-Find algorithm** to fix 3 bugs:
+```
+for each matched pair (MAIN_TABLE, KEY_MAIN) ↔ (MATCHING_TABLE, KEY_MATCH):
+    union(node_main, node_match)
 
-1. **Type inconsistency** — MATCHING_TABLE path stored `str(bkey)` instead of `[str(bkey)]` → Phase 4 loop iterated characters instead of BKEY values.
-2. **Conflict not merged** — when both keys already had different BKEYs, original code detected the conflict but did not merge → same KEY got multiple BKEYs.
-3. **Dual-path overlap** — keys appearing only as KEY_MATCH (never KEY_MAIN) were included in both `gen_bkey_rs` and `not_pass_post` paths → duplicate BKEYs.
+for each node in parent:
+    assign bkey = component_bkey[find(node)]
+```
 
-**Fix:** All matched pairs are unioned into connected components via Union-Find. One BKEY integer is assigned per component. `not_pass_post` is anti-joined against `gen_bkey_rs` before the final union to prevent overlap.
+**Path compression** is used for O(α) lookup performance.
 
-**Result:** 0 duplicate BKEYs per KEY. All transitively-connected keys share exactly one BKEY.
+---
+
+### Phase 4: Output Priority (Three-Way Dedup)
+
+Three output paths are merged with explicit priority to ensure each KEY gets exactly one BKEY:
+
+```
+Priority (highest → lowest):
+  1. bkey_exists_rs  — keys already assigned in previous runs
+  2. gen_bkey_rs     — keys assigned in this run (via Union-Find)
+  3. not_pass_post   — unmatched keys (self-BKEY)
+```
+
+Implementation uses left-anti joins:
+```python
+gen_bkey_rs_deduped   = gen_bkey_rs.join(bkey_exists_rs,   on=[KEY,TABLE], how="left_anti")
+not_pass_post_deduped = not_pass_post.join(gen_bkey_rs,    on=[KEY,TABLE], how="left_anti")
+                                     .join(bkey_exists_rs, on=[KEY,TABLE], how="left_anti")
+
+final = gen_bkey_rs_deduped ∪ bkey_exists_rs ∪ not_pass_post_deduped
+```
+
+---
+
+### SUBJECT Propagation
+
+SUBJECT is carried from config → matching log → matching result → BKEY table via a `subject_map`:
+
+```python
+subject_map = {(MAIN_TABLE, KEY_MAIN): SUBJECT,
+               (MATCHING_TABLE, KEY_MATCH): SUBJECT, ...}
+```
+
+Built from `gen_bkey_filter` (matched pairs). When attaching SUBJECT in Phase 4:
+- Keys found in `subject_map` → use matched SUBJECT (e.g. `'identity'`)
+- Keys not found (unmatched, `not_pass_post`) → `SUBJECT = 'default'`
+
+Unmatched records with `SUBJECT = 'default'` are interim state — they will receive a proper SUBJECT when they eventually match another record in a future pipeline run (or when their table runs as MAIN).
+
+---
+
+### Case Sensitivity
+
+All `table_s` set members and `bkey_dict` keys are normalised to `.lower()`. The `find_related_records()` call also uses `.lower()`. Without this, mixed-case table names (e.g. `SOURCE_MOTOR` vs `source_motor`) cause silent lookup failure and missing BKEY entries.
 
 ---
 
@@ -176,8 +226,8 @@ Phase 3 (BKEY integer assignment) was replaced with a **Union-Find algorithm** t
 
 | Behaviour | v1 (original) | v2 (TIER + SUBJECT) |
 |---|---|---|
-| Matching | All rules in one SQL pass | Tier-by-tier, cascading exclusion |
-| Dual-BKEY | Possible when record matches multiple rule groups | Eliminated — by TIER exclusion (at most 1 tier per record) + Union-Find merge (connected components share one BKEY) |
+| Matching | All rules in one SQL pass | Tier-by-tier (all tiers run independently, no SQL exclusion between tiers) |
+| Dual-BKEY | Possible when record matches multiple rule groups | Eliminated — by Union-Find (all transitively-connected keys share one BKEY) |
 | SUBJECT | Not present | Carried from config → bkey |
 | Tables | Original | `_v2` suffix (parallel, non-destructive) |
 | Config | `chv_config_matching` | `chv_config_matching_v2` + TIER + SUBJECT columns |

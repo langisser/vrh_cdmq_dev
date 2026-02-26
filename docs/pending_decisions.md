@@ -144,19 +144,19 @@ levenshtein(MAIN.Ident_card, MATCH.Id_card) <= 2   weight 1.0
 
 | Table | GROUP BY columns | Aggregate |
 |---|---|---|
-| `dedup_customer_name` | bkey, id_card, fname, lname, prefix | MAX(update_date), collect_list(policy_no) |
-| `dedup_province` | bkey, id_card, area, district, postcode, province | MAX(update_date), collect_list(policy_no) |
-| `dedup_gender` | bkey, id_card, gender, birth_date | MAX(update_date), collect_list(policy_no) |
-| `dedup_email` | bkey, id_card, email | MAX(update_date), collect_list(policy_no) |
-| `dedup_phone` | bkey, id_card, phone | MAX(update_date), collect_list(policy_no) |
+| `dedup_customer_name` | bkey, id_card, fname, lname, prefix | MAX(update_date), collect_list(policy_id) AS rec_keyvalue |
+| `dedup_province` | bkey, id_card, area, district, postcode, province | MAX(update_date), collect_list(policy_id) AS rec_keyvalue |
+| `dedup_gender` | bkey, id_card, gender, birth_date | MAX(update_date), collect_list(policy_id) AS rec_keyvalue |
+| `dedup_email` | bkey, id_card, email | MAX(update_date), collect_list(policy_id) AS rec_keyvalue |
+| `dedup_phone` | bkey, id_card, phone_no | MAX(update_date), collect_list(policy_id) AS rec_keyvalue |
 
 ### Design Decisions Confirmed
 
 - **Scope:** ครอบคลุมทั้ง source_motor และ trust_source
-- **Key columns:** source_motor → `policy_no`, trust_source → `id_card`
+- **Key columns:** source_motor → `policy_id`, trust_source → `id_card`
 - **Dedup rule:** GROUP BY all non-date columns → MAX(update_date) per group
-- **policy_keys:** `array<string>` via `collect_list(policy_no)` — Spark/Databricks native
-- **Null handling:** include null values ไว้ก่อน (ยังไม่ filter null สำหรับ email/phone)
+- **rec_keyvalue:** `array<string>` via `collect_list(policy_id)` — Spark/Databricks native
+- **Null handling:** filter NULL สำหรับ email และ phone_no (ไม่เอา null rows)
 - **Same BKEY can appear in multiple rows** if attribute values differ within the group (e.g. different prefix, different lname variant)
 - **Output schema:** silver (ทั้ง bkey table และ dedup tables)
 - **Trigger:** on-demand (ไม่ auto-run หลัง match pipeline)
@@ -186,11 +186,11 @@ SELECT
     s.fname,
     s.lname,
     s.prefix,
-    MAX(s.update_date)          AS update_date,
-    collect_list(s.policy_no)   AS policy_keys
+    MAX(s.update_date)           AS update_date,
+    collect_list(s.policy_id)    AS rec_keyvalue
 FROM chv_table_bkey_v2 b
 JOIN source_motor s
-  ON b.key = s.policy_no
+  ON b.key = s.policy_id
  AND b.table = 'viriyah_cdqm_poc.silver.source_motor'
 GROUP BY b.bkey, s.id_card, s.fname, s.lname, s.prefix
 ```
@@ -199,7 +199,7 @@ GROUP BY b.bkey, s.id_card, s.fname, s.lname, s.prefix
 
 1. **trust_source join key:** ใช้ `config_pk` ของแต่ละ table — ไม่ hard-code `id_card` แต่ dynamic ตาม config (trust_source ปัจจุบันใช้ `id_card`)
 2. **trust_source update_date:** trust_source ไม่มี `update_date` — ใช้ `CAST(NULL AS timestamp)` แทนเมื่อ UNION กับ source_motor เพื่อให้ schema ตรงกัน
-3. **Null handling:** include null email/phone rows ไว้ก่อน — จะมาตัดสินใจอีกทีเมื่อเห็นผล dedup จริง
+3. **Null handling:** filter NULL สำหรับ email และ phone_no — ไม่เอา null rows เข้า dedup tables
 
 ---
 

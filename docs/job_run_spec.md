@@ -96,8 +96,8 @@ Delimiter: `^|` (caret-pipe)
 
 | Job | Pattern | Example |
 |---|---|---|
-| Pre-val motor | `EDP_PRE_VLD_<TABLE_SUFFIX>` | `EDP_PRE_VLD_MOTOR_DEVTEST` |
-| Pre-val trust | `EDP_PRE_VLD_<TABLE_SUFFIX>` | `EDP_PRE_VLD_TRUST_DEVTEST` |
+| Pre-val motor | `EDP_PRE_VLD_V2_<TABLE_SUFFIX>` | `EDP_PRE_VLD_V2_SOURCE_MOTOR_DEVTEST` |
+| Pre-val trust | `EDP_PRE_VLD_V2_<TABLE_SUFFIX>` | `EDP_PRE_VLD_V2_TRUST_SOURCE_DEVTEST` |
 | Match | `EDP_MATCHING_V2_<TABLE_SUFFIX>_DATE_<yyyy-MM-dd>` | `EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2025-01-01` |
 | Dedup | `EDP_DEDUP_<TABLE_SUFFIX>_DATE_<yyyy-MM-dd>` | `EDP_DEDUP_SOURCE_MOTOR_DATE_2025-01-01` |
 
@@ -207,14 +207,14 @@ These must be populated before running the pipeline for any new table.
 ### Job 1 — Pre-validation: SOURCE_MOTOR
 ```
 Notebook : vrh_chv_pre_validation_v2
-PARAMS   : viriyah_cdqm_poc.silver.source_motor_devtest^|viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2^|2025-01-01^|EDP_PRE_VLD_MOTOR_DEVTEST^|1^|EDP_PRE_VLD_MOTOR_DEVTEST^|1
+PARAMS   : viriyah_cdqm_poc.silver.source_motor_devtest^|viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2^|2025-01-01^|EDP_PRE_VLD_V2_SOURCE_MOTOR_DEVTEST^|1^|EDP_PRE_VLD_V2_SOURCE_MOTOR_DEVTEST^|1
 ENV      : dev
 ```
 
 ### Job 2 — Pre-validation: TRUST_SOURCE
 ```
 Notebook : vrh_chv_pre_validation_v2
-PARAMS   : viriyah_cdqm_poc.silver.trust_source_devtest^|viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2^|2025-01-01^|EDP_PRE_VLD_TRUST_DEVTEST^|1^|EDP_PRE_VLD_TRUST_DEVTEST^|1
+PARAMS   : viriyah_cdqm_poc.silver.trust_source_devtest^|viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2^|2025-01-01^|EDP_PRE_VLD_V2_TRUST_SOURCE_DEVTEST^|1^|EDP_PRE_VLD_V2_TRUST_SOURCE_DEVTEST^|1
 ENV      : dev
 ```
 

@@ -28,8 +28,8 @@ vrh_chv_main_v2
 
 **PRCS_NM ที่จะถูก generate อัตโนมัติ:**
 ```
-Pre-validation : EDP_PRE_VLD_SOURCE_MOTOR
-Matching       : EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05
+Pre-validation : EDP_PRE_VLD_V2_{SOURCE_TABLE_NAME}   เช่น EDP_PRE_VLD_V2_SOURCE_MOTOR
+Matching       : EDP_MATCHING_V2_{TABLE_NAME}_DATE_{data_date}   เช่น EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05
 ```
 
 ---
@@ -61,9 +61,9 @@ Notebook  : vrh_chv_pre_validation_v2
 PARAMS    : viriyah_cdqm_poc.silver.source_motor_devtest
             ^|viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2
             ^|2025-01-01
-            ^|EDP_PRE_VLD_MOTOR_DEVTEST
+            ^|EDP_PRE_VLD_V2_SOURCE_MOTOR_DEVTEST
             ^|1
-            ^|EDP_PRE_VLD_MOTOR_DEVTEST
+            ^|EDP_PRE_VLD_V2_SOURCE_MOTOR_DEVTEST
             ^|1
 ENV       : dev
 
@@ -72,9 +72,9 @@ Notebook  : vrh_chv_pre_validation_v2
 PARAMS    : viriyah_cdqm_poc.silver.trust_source_devtest
             ^|viriyah_cdqm_poc.control_fw.chv_pre_validation_result_v2
             ^|2025-01-01
-            ^|EDP_PRE_VLD_TRUST_DEVTEST
+            ^|EDP_PRE_VLD_V2_TRUST_SOURCE_DEVTEST
             ^|1
-            ^|EDP_PRE_VLD_TRUST_DEVTEST
+            ^|EDP_PRE_VLD_V2_TRUST_SOURCE_DEVTEST
             ^|1
 ENV       : dev
 
@@ -141,7 +141,7 @@ SELECT
     COUNT(*) AS CNT
 FROM viriyah_cdqm_poc.control_fw.chv_matching_log_v2
 WHERE DATA_DT = '2026-01-05'
-  AND PRCS_NM = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
+  AND PRCS_NM = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
 GROUP BY MAIN_TABLE, MATCHING_TABLE, MATCHING_RULES, RESULT
 ORDER BY MATCHING_RULES, RESULT;
 ```
@@ -157,7 +157,7 @@ SELECT
     RESULT
 FROM viriyah_cdqm_poc.control_fw.chv_matching_log_v2
 WHERE DATA_DT  = '2026-01-05'
-  AND PRCS_NM  = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
+  AND PRCS_NM  = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
   AND RESULT   = 'PASSED'
 ORDER BY KEY_MAIN, MATCHING_RULES;
 ```
@@ -167,7 +167,7 @@ ORDER BY KEY_MAIN, MATCHING_RULES;
 SELECT DISTINCT KEY_MAIN
 FROM viriyah_cdqm_poc.control_fw.chv_matching_log_v2
 WHERE DATA_DT = '2026-01-05'
-  AND PRCS_NM = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
+  AND PRCS_NM = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
   AND RESULT  = 'FAILED'
 
 EXCEPT
@@ -175,7 +175,7 @@ EXCEPT
 SELECT DISTINCT KEY_MAIN
 FROM viriyah_cdqm_poc.control_fw.chv_matching_log_v2
 WHERE DATA_DT = '2026-01-05'
-  AND PRCS_NM = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
+  AND PRCS_NM = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
   AND RESULT  = 'PASSED';
 ```
 
@@ -192,7 +192,7 @@ SELECT
     KEY_MATCH
 FROM viriyah_cdqm_poc.control_fw.chv_matching_result_v2
 WHERE DATA_DT = '2026-01-05'
-  AND PRCS_NM = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
+  AND PRCS_NM = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
 ORDER BY KEY_MAIN;
 ```
 
@@ -201,7 +201,7 @@ ORDER BY KEY_MAIN;
 SELECT KEY_MAIN, KEY_MATCH
 FROM viriyah_cdqm_poc.control_fw.chv_matching_result_v2
 WHERE DATA_DT          = '2026-01-05'
-  AND PRCS_NM          = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
+  AND PRCS_NM          = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
   AND LOWER(MAIN_TABLE)     = 'viriyah_cdqm_poc.silver.source_motor'
   AND LOWER(MATCHING_TABLE) = 'viriyah_cdqm_poc.silver.trust_source';
 ```
@@ -211,7 +211,7 @@ WHERE DATA_DT          = '2026-01-05'
 SELECT KEY_MAIN, KEY_MATCH
 FROM viriyah_cdqm_poc.control_fw.chv_matching_result_v2
 WHERE DATA_DT          = '2026-01-05'
-  AND PRCS_NM          = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
+  AND PRCS_NM          = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
   AND LOWER(MAIN_TABLE)     = 'viriyah_cdqm_poc.silver.source_motor'
   AND LOWER(MATCHING_TABLE) = 'viriyah_cdqm_poc.silver.source_motor';
 ```
@@ -228,7 +228,7 @@ JOIN viriyah_cdqm_poc.control_fw.chv_matching_result_v2 b
   AND a.DATA_DT = b.DATA_DT
   AND a.PRCS_NM = b.PRCS_NM
 WHERE a.DATA_DT               = '2026-01-05'
-  AND a.PRCS_NM               = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
+  AND a.PRCS_NM               = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
   AND LOWER(a.MATCHING_TABLE) = 'viriyah_cdqm_poc.silver.trust_source'
   AND LOWER(b.MATCHING_TABLE) = 'viriyah_cdqm_poc.silver.source_motor';
 ```
@@ -245,7 +245,7 @@ SELECT
     BKEY
 FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2
 WHERE DATA_DT = '2026-01-05'
-  AND PRCS_NM = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
+  AND PRCS_NM = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
 ORDER BY BKEY, TABLE;
 ```
 
@@ -258,7 +258,7 @@ SELECT
     COLLECT_LIST(BKEY)   AS bkeys
 FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2
 WHERE DATA_DT = '2026-01-05'
-  AND PRCS_NM = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
+  AND PRCS_NM = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
 GROUP BY KEY, TABLE
 HAVING COUNT(DISTINCT BKEY) > 1;
 ```
@@ -271,7 +271,7 @@ SELECT
     b.KEY
 FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2 b
 WHERE DATA_DT = '2026-01-05'
-  AND PRCS_NM = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
+  AND PRCS_NM = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
 ORDER BY BKEY, TABLE;
 ```
 
@@ -280,7 +280,7 @@ ORDER BY BKEY, TABLE;
 SELECT b.KEY, b.BKEY
 FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2 b
 WHERE b.DATA_DT         = '2026-01-05'
-  AND b.PRCS_NM         = 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05'
+  AND b.PRCS_NM         = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
   AND LOWER(b.TABLE)    = 'viriyah_cdqm_poc.silver.source_motor'
   AND NOT EXISTS (
       SELECT 1 FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2 b2
@@ -300,7 +300,7 @@ WHERE b.DATA_DT         = '2026-01-05'
 -- กำหนดตัวแปรก่อน run
 -- ====================================================
 DECLARE OR REPLACE VARIABLE v_dt     STRING DEFAULT '2026-01-05';
-DECLARE OR REPLACE VARIABLE v_prcs   STRING DEFAULT 'EDP_MATCHING_SOURCE_MOTOR_DATE_2026-01-05';
+DECLARE OR REPLACE VARIABLE v_prcs   STRING DEFAULT 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05';
 DECLARE OR REPLACE VARIABLE v_table  STRING DEFAULT 'viriyah_cdqm_poc.silver.source_motor';
 
 -- [1] Pre-validation summary
@@ -408,35 +408,4 @@ VALUES
 
 ---
 
-### LC-003: วิธี run notebook บน Databricks โดยไม่ต้อง upload ไฟล์
-
-**วันที่:** 2026-02-26
-**Pattern:** ใช้ `databricks.sdk` + `DatabricksSession` จาก local machine รัน code บน cluster โดยตรง
-
-```python
-# รัน notebook บน cluster (ไม่ต้อง upload)
-from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.jobs import NotebookTask, RunTask
-
-w = WorkspaceClient()
-run = w.jobs.submit(
-    run_name='my_run',
-    tasks=[RunTask(
-        task_key='task1',
-        existing_cluster_id='<cluster_id>',
-        notebook_task=NotebookTask(
-            notebook_path='/Workspace/Users/.../notebook',
-            base_parameters={'PARAMS': '...', 'ENV': 'dev'}
-        )
-    )]
-).result()  # blocks จน job เสร็จ
-print(run.state.result_state)
-
-# รัน SQL/code โดยตรงบน cluster (ไม่ต้องผ่าน notebook)
-from databricks.connect import DatabricksSession
-spark = DatabricksSession.builder.getOrCreate()
-spark.sql("SELECT ...")
-```
-
-**venv ที่ใช้:** `/home/khaw/ClaudeCode/databricks_dev_local/venv`
-**config file:** `/home/khaw/ClaudeCode/vrh_cdmq_dev/.databrickscfg`
+> **LC-003: วิธี run notebook บน Databricks** → ดูใน `CLAUDE.md` section "Development Workflow"
