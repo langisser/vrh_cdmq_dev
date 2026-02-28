@@ -5,7 +5,7 @@
 - **NEVER commit `.databrickscfg`** — it contains credentials
 - **No local test execution** — all notebooks run on Databricks cluster only
 - **`setup_env.sh` is broken** — always use the export command below instead
-- **venv for SDK:** `/home/khaw/ClaudeCode/databricks_dev_local/venv` (not the project venv)
+- **venv:** use the project venv at `/home/khaw/ClaudeCode/vrh_cdmq_dev/venv` — it now includes `databricks_dev_local`
 
 ## Environment
 
@@ -56,25 +56,26 @@ databricks workspace import --file notebooks/work/<file>.py \
 **Run notebook on cluster** — write a script file in `scripts/`, then run it:
 ```python
 # scripts/run_<name>.py
-import os, sys
-sys.path.insert(0, '/home/khaw/ClaudeCode/databricks_dev_local')
+import os
 os.environ['DATABRICKS_CONFIG_FILE'] = '/home/khaw/ClaudeCode/vrh_cdmq_dev/.databrickscfg'
 
-from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.jobs import NotebookTask, RunTask
+from tools import run_notebook, get_run_cell_error
 
-w = WorkspaceClient()
-run = w.jobs.submit(run_name='run', tasks=[RunTask(
-    task_key='t1',
-    existing_cluster_id='0130-031624-0nmpnh8g',
-    notebook_task=NotebookTask(
-        notebook_path='/Workspace/Users/khachornpop@inteltion.com/vrh/<path>',
-        base_parameters={'PARAMS': '<params>', 'ENV': 'dev'})
-)]).result()
-print(run.state.result_state)
+result = run_notebook(
+    notebook_path='/Workspace/Users/khachornpop@inteltion.com/vrh/<path>',
+    params={'PARAMS': '<params>', 'ENV': 'dev'},
+    cluster_id='0130-031624-0nmpnh8g',
+    auth_method='azure_cli'
+)
+print(result['status'], result.get('error'))
+
+if result['status'] == 'FAILED':
+    for e in get_run_cell_error(result['run_id'], auth_method='azure_cli'):
+        print(e['summary'])
+        print(e['error_detail'])
 ```
 ```bash
-source /home/khaw/ClaudeCode/databricks_dev_local/venv/bin/activate
+source /home/khaw/ClaudeCode/vrh_cdmq_dev/venv/bin/activate
 python3 scripts/run_<name>.py
 ```
 

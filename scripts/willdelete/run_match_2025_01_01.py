@@ -8,10 +8,8 @@ Steps:
 """
 import os, sys
 os.environ["DATABRICKS_CONFIG_FILE"] = "/home/khaw/ClaudeCode/vrh_cdmq_dev/.databrickscfg"
-sys.path.insert(0, "/home/khaw/ClaudeCode/databricks_dev_local")
 
-from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.jobs import NotebookTask, RunTask
+from tools import run_notebook, get_run_cell_error
 
 CLUSTER_ID = "0130-031624-0nmpnh8g"
 WS         = "/Workspace/Users/khachornpop@inteltion.com/vrh/match_and_merge"
@@ -47,24 +45,20 @@ JOBS = [
     },
 ]
 
-w = WorkspaceClient()
 for job in JOBS:
     print(f"\n>>> [{job['label']}] submitting...")
-    run = w.jobs.submit(
-        run_name=f"match_merge_{DATA_DT}_{job['label']}",
-        tasks=[RunTask(
-            task_key="t1",
-            existing_cluster_id=CLUSTER_ID,
-            notebook_task=NotebookTask(
-                notebook_path=job["notebook"],
-                base_parameters=job["params"],
-            ),
-        )],
-    ).result()
-    state = run.state.result_state
-    print(f"    result: {state}")
-    if str(state) != "RunResultState.SUCCESS":
-        print(f"FAILED at [{job['label']}] — stopping.")
+    result = run_notebook(
+        notebook_path=job["notebook"],
+        params=job["params"],
+        cluster_id=CLUSTER_ID,
+        auth_method="azure_cli",
+    )
+    print(f"    result: {result['status']}  ({result['duration']}s)  {result['run_page_url']}")
+    if result["status"] != "SUCCESS":
+        print(f"FAILED at [{job['label']}]: {result.get('error')}")
+        for e in get_run_cell_error(result["run_id"], auth_method="azure_cli"):
+            print(f"  cell: {e['summary']}")
+            print(f"  {e['error_detail']}")
         sys.exit(1)
 
 print(f"\nAll steps PASSED for DATA_DT={DATA_DT}")

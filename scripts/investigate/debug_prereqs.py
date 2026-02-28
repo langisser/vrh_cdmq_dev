@@ -3,11 +3,10 @@
 debug_prereqs.py — ตรวจสอบ config tables และ pre-validation results
 
 Usage:
-    source /home/khaw/ClaudeCode/databricks_dev_local/venv/bin/activate
+    source /home/khaw/ClaudeCode/vrh_cdmq_dev/venv/bin/activate
     python3 scripts/investigate/debug_prereqs.py
 """
 import os, sys
-sys.path.insert(0, '/home/khaw/ClaudeCode/databricks_dev_local')
 os.environ['DATABRICKS_CONFIG_FILE'] = '/home/khaw/ClaudeCode/vrh_cdmq_dev/.databrickscfg'
 
 from databricks.connect import DatabricksSession

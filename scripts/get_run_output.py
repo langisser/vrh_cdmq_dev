@@ -1,5 +1,4 @@
 import sys, os
-sys.path.insert(0, '/home/khaw/ClaudeCode/databricks_dev_local/notebooks/work')
 os.environ['DATABRICKS_CONFIG_FILE'] = '/home/khaw/ClaudeCode/vrh_cdmq_dev/.databrickscfg'
 
 from databricks.sdk import WorkspaceClient

@@ -3,11 +3,10 @@
 debug_dedup_error.py — ตรวจสอบ schema ของ chv_table_bkey_v2 และ chv_matching_log_v2
 
 Usage:
-    source /home/khaw/ClaudeCode/databricks_dev_local/venv/bin/activate
+    source /home/khaw/ClaudeCode/vrh_cdmq_dev/venv/bin/activate
     python3 scripts/investigate/debug_dedup_error.py
 """
 import os, sys
-sys.path.insert(0, '/home/khaw/ClaudeCode/databricks_dev_local')
 os.environ['DATABRICKS_CONFIG_FILE'] = '/home/khaw/ClaudeCode/vrh_cdmq_dev/.databrickscfg'
 
 from databricks.connect import DatabricksSession

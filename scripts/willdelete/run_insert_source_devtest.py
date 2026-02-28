@@ -6,7 +6,7 @@ Reads source/Sample_Data_PoC_Match_Merge.xlsx and inserts data directly
 into Databricks tables via DatabricksSession using multi-row INSERT VALUES.
 
 Usage:
-    source /home/khaw/ClaudeCode/databricks_dev_local/venv/bin/activate
+    source /home/khaw/ClaudeCode/vrh_cdmq_dev/venv/bin/activate
     python3 scripts/run_insert_source_devtest.py
 """
 
