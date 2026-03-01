@@ -479,4 +479,4 @@ VALUES
 
 ---
 
-> **LC-003: วิธี run notebook บน Databricks** → ดูใน `CLAUDE.md` section "Development Workflow"
+> **LC-003: วิธี run notebook บน Databricks** → ดูใน `CLAUDE.md` section "Run Notebook Script Template"

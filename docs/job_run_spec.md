@@ -14,8 +14,8 @@
 | **Cluster ID** | `0130-031624-0nmpnh8g` |
 | **Match & Merge notebook path** | `/Workspace/Users/khachornpop@inteltion.com/vrh/match_and_merge` |
 | **Dedup notebook path** | `/Workspace/Users/khachornpop@inteltion.com/vrh/dedup` |
-| **Dedup scripts (local)** | `scripts/run_dedup_pipeline.sh`, `scripts/upload_dedup_pipeline.sh` |
-| **Config file (local)** | `/home/khaw/ClaudeCode/vrh_cdmq_dev/.databrickscfg` |
+| **Dedup scripts (local)** | `scripts/upload_dedup_pipeline.py`, `scripts/run_dedup_full_rebuild.py` |
+| **Config file (local)** | `<repo-root>/.databrickscfg` |
 | **Source table** | `viriyah_cdqm_poc.silver.source_motor_devtest` |
 | **Trust source table** | `viriyah_cdqm_poc.silver.trust_source_devtest` |
 
@@ -28,9 +28,13 @@
 | 1 | `PRE_VAL_MOTOR` | `vrh_chv_pre_validation_v2` | Pre-validate SOURCE_MOTOR records before matching |
 | 2 | `PRE_VAL_TRUST` | `vrh_chv_pre_validation_v2` | Pre-validate TRUST_SOURCE records before matching |
 | 3 | `MATCH_MOTOR` | `vrh_chv_match_v2` | Run matching + BKEY assignment for SOURCE_MOTOR |
-| 4 | `DEDUP` | `vrh_chv_dedup_v2` | Build 5 deduplicated output tables from BKEY results — path: `/vrh/dedup` |
+| 4a | `DEDUP_NAME` | `dedup_customer_name` | Dedup name+prefix per BKEY — path: `/vrh/dedup` |
+| 4b | `DEDUP_PROVINCE` | `dedup_province` | Dedup address per BKEY |
+| 4c | `DEDUP_GENDER` | `dedup_gender` | Dedup gender+birth_date per BKEY |
+| 4d | `DEDUP_EMAIL` | `dedup_email` | Dedup email per BKEY |
+| 4e | `DEDUP_PHONE` | `dedup_phone` | Dedup phone_no per BKEY |
 
-> **Run order:** Job 1 → Job 2 → Job 3 → Job 4 (sequential, each depends on previous)
+> **Run order:** Job 1 → Job 2 → Job 3 → Jobs 4a–4e (4a–4e can run in any order after Job 3)
 
 ---
 
@@ -78,19 +82,20 @@ Delimiter: `^|` (caret-pipe)
 | 5 | `updt_prcs_nm` | STRING | `EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2025-01-01` |
 | 6 | `updt_ld_id` | INT | `1` |
 
-#### Dedup v2 (6 fields, same format as match)
+#### Dedup notebooks (4 fields)
 ```
-<source_table>^|<data_dt>^|<prcs_nm>^|<ld_id>^|<updt_prcs_nm>^|<updt_ld_id>
+<source_table>^|<data_dt>^|<prcs_nm>^|<ld_id>
 ```
 
 | Position | Field | Type | Example |
 |---|---|---|---|
 | 1 | `source_table` | STRING | `viriyah_cdqm_poc.silver.source_motor_devtest` |
 | 2 | `data_dt` | DATE (yyyy-MM-dd) | `2025-01-01` |
-| 3 | `prcs_nm` | STRING | `EDP_DEDUP_SOURCE_MOTOR_DATE_2025-01-01` |
+| 3 | `prcs_nm` | STRING | `EDP_DEDUP_CUSTOMER_NAME` |
 | 4 | `ld_id` | INT | `1` |
-| 5 | `updt_prcs_nm` | STRING | `EDP_DEDUP_SOURCE_MOTOR_DATE_2025-01-01` |
-| 6 | `updt_ld_id` | INT | `1` |
+
+> No `SOURCE_TABLE` / `TRUST_TABLE` widget params needed — individual dedup notebooks
+> read directly from `chv_table_bkey_v2` using the `source_table` param.
 
 ### PRCS_NM Naming Convention
 
@@ -99,7 +104,7 @@ Delimiter: `^|` (caret-pipe)
 | Pre-val motor | `EDP_PRE_VLD_V2_<TABLE_SUFFIX>` | `EDP_PRE_VLD_V2_SOURCE_MOTOR_DEVTEST` |
 | Pre-val trust | `EDP_PRE_VLD_V2_<TABLE_SUFFIX>` | `EDP_PRE_VLD_V2_TRUST_SOURCE_DEVTEST` |
 | Match | `EDP_MATCHING_V2_<TABLE_SUFFIX>_DATE_<yyyy-MM-dd>` | `EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2025-01-01` |
-| Dedup | `EDP_DEDUP_<TABLE_SUFFIX>_DATE_<yyyy-MM-dd>` | `EDP_DEDUP_SOURCE_MOTOR_DATE_2025-01-01` |
+| Dedup | `EDP_DEDUP_<NOTEBOOK_SUFFIX>` | `EDP_DEDUP_CUSTOMER_NAME`, `EDP_DEDUP_PHONE` |
 
 ---
 
@@ -180,11 +185,12 @@ Delimiter: `^|` (caret-pipe)
 
 | Table | Full Name | Key Columns |
 |---|---|---|
-| Customer name | `viriyah_cdqm_poc.silver.dedup_customer_name` | `bkey, id_card, fname, lname, prefix, update_date, policy_keys` |
-| Province/address | `viriyah_cdqm_poc.silver.dedup_province` | `bkey, id_card, area, district, postcode, province, update_date, policy_keys` |
-| Gender/DOB | `viriyah_cdqm_poc.silver.dedup_gender` | `bkey, id_card, gender, birth_date, update_date, policy_keys` |
-| Email | `viriyah_cdqm_poc.silver.dedup_email` | `bkey, id_card, email, update_date, policy_keys` |
-| Phone | `viriyah_cdqm_poc.silver.dedup_phone` | `bkey, id_card, phone, update_date, policy_keys` |
+| Customer name | `viriyah_cdqm_poc.silver.dedup_customer_name` | `bkey, id_card, fname, lname, prefix, update_date, rec_keyvalue` |
+| Province/address | `viriyah_cdqm_poc.silver.dedup_province` | `bkey, id_card, area, district, postcode, province, update_date, rec_keyvalue` |
+| Gender/DOB | `viriyah_cdqm_poc.silver.dedup_gender` | `bkey, id_card, gender, birth_date, update_date, rec_keyvalue` |
+| Email | `viriyah_cdqm_poc.silver.dedup_email` | `bkey, id_card, email, update_date, rec_keyvalue` |
+| Phone | `viriyah_cdqm_poc.silver.dedup_phone` | `bkey, id_card, phone_no, update_date, rec_keyvalue` |
+| Name variant report | `viriyah_cdqm_poc.silver.dedup_name_variant_report` | `bkey, id_card, fname_raw, lname_raw, fname_normalized, lname_normalized, reason_code` |
 
 ---
 
@@ -225,15 +231,33 @@ PARAMS   : viriyah_cdqm_poc.silver.source_motor_devtest^|2025-01-01^|EDP_MATCHIN
 ENV      : dev
 ```
 
-### Job 4 — Dedup
+### Jobs 4a–4e — Dedup (run each notebook separately, any order)
 ```
-Notebook     : /Workspace/Users/khachornpop@inteltion.com/vrh/dedup/vrh_chv_dedup_v2
-PARAMS       : viriyah_cdqm_poc.silver.source_motor_devtest^|2025-01-01^|EDP_DEDUP_SOURCE_MOTOR_DATE_2025-01-01^|1^|EDP_DEDUP_SOURCE_MOTOR_DATE_2025-01-01^|1
-ENV          : dev
-SOURCE_TABLE : viriyah_cdqm_poc.silver.source_motor_devtest
-TRUST_TABLE  : viriyah_cdqm_poc.silver.trust_source_devtest
+Notebook : dedup/dedup_customer_name
+PARAMS   : viriyah_cdqm_poc.silver.source_motor_devtest^|2025-01-01^|EDP_DEDUP_CUSTOMER_NAME^|1
+ENV      : dev
+
+Notebook : dedup/dedup_province
+PARAMS   : viriyah_cdqm_poc.silver.source_motor_devtest^|2025-01-01^|EDP_DEDUP_PROVINCE^|1
+ENV      : dev
+
+Notebook : dedup/dedup_gender
+PARAMS   : viriyah_cdqm_poc.silver.source_motor_devtest^|2025-01-01^|EDP_DEDUP_GENDER^|1
+ENV      : dev
+
+Notebook : dedup/dedup_email
+PARAMS   : viriyah_cdqm_poc.silver.source_motor_devtest^|2025-01-01^|EDP_DEDUP_EMAIL^|1
+ENV      : dev
+
+Notebook : dedup/dedup_phone
+PARAMS   : viriyah_cdqm_poc.silver.source_motor_devtest^|2025-01-01^|EDP_DEDUP_PHONE^|1
+ENV      : dev
 ```
+
+> Each notebook uses MERGE pattern — safe to re-run (idempotent).
+> For bulk rebuild: `python3 scripts/run_dedup_full_rebuild.py`
 
 ---
 
 *Generated from design docs and scripts — 2026-02-27*
+*Updated 2026-03-02 — dedup layer changed from vrh_chv_dedup_v2 to individual notebooks; rec_keyvalue column name corrected; PARAMS format updated to 4 fields*
