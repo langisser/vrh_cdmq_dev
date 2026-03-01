@@ -25,8 +25,8 @@ SELECT
     id_card,
     norm_gender              AS gender,
     birth_date,
-    MAX(update_date)         AS update_date,
-    collect_list(rec_key)    AS rec_keyvalue
+    MAX(update_date)                      AS update_date,
+    array_distinct(collect_list(rec_key)) AS rec_keyvalue
 FROM (
     SELECT
         bkey, id_card, gender, birth_date, update_date, rec_key,
@@ -64,12 +64,13 @@ GROUP BY bkey, id_card, norm_gender, birth_date
 # COMMAND ----------
 # MAGIC %sql
 -- Step 3: MERGE INTO dedup_gender
+-- NOTE: birth_date ใช้ <=> (null-safe equal) เพราะ NULL = NULL คือ NULL ไม่ใช่ TRUE
 MERGE INTO viriyah_cdqm_poc.silver.dedup_gender AS target
 USING gender_staging AS source
 ON  target.bkey       = source.bkey
 AND target.id_card    = source.id_card
 AND target.gender     = source.gender
-AND target.birth_date = source.birth_date
+AND target.birth_date <=> source.birth_date
 WHEN MATCHED THEN UPDATE SET
     target.update_date  = source.update_date,
     target.rec_keyvalue = source.rec_keyvalue

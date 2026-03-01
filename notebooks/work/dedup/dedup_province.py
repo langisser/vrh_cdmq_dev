@@ -21,8 +21,8 @@ WHERE lower(`table`) = lower('viriyah_cdqm_poc.silver.source_motor_devtest')
 CREATE OR REPLACE TEMP VIEW province_staging AS
 SELECT
     bkey, id_card, area, district, postcode, province,
-    MAX(update_date)       AS update_date,
-    collect_list(rec_key)  AS rec_keyvalue
+    MAX(update_date)                      AS update_date,
+    array_distinct(collect_list(rec_key)) AS rec_keyvalue
 FROM (
     -- existing rows (explode rec_keyvalue กลับมาเป็น individual keys)
     SELECT bkey, id_card, area, district, postcode, province,
@@ -51,14 +51,15 @@ GROUP BY bkey, id_card, area, district, postcode, province
 # COMMAND ----------
 # MAGIC %sql
 -- Step 3: MERGE INTO dedup_province
+-- NOTE: area/district/postcode/province ใช้ <=> (null-safe equal) เพราะ column เหล่านี้อาจ NULL
 MERGE INTO viriyah_cdqm_poc.silver.dedup_province AS target
 USING province_staging AS source
 ON  target.bkey     = source.bkey
 AND target.id_card  = source.id_card
-AND target.area     = source.area
-AND target.district = source.district
-AND target.postcode = source.postcode
-AND target.province = source.province
+AND target.area     <=> source.area
+AND target.district <=> source.district
+AND target.postcode <=> source.postcode
+AND target.province <=> source.province
 WHEN MATCHED THEN UPDATE SET
     target.update_date  = source.update_date,
     target.rec_keyvalue = source.rec_keyvalue

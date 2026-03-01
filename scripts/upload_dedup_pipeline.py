@@ -16,12 +16,17 @@ WS_MATCH = '/Workspace/Users/khachornpop@inteltion.com/vrh/match_and_merge'
 WS_DEDUP = '/Workspace/Users/khachornpop@inteltion.com/vrh/dedup'
 
 UPLOADS = [
-    ("ddl_dedup_tables",   f"{BASE}/match_and_merge/insert_scripts/ddl_dedup_tables.py",   f"{WS_MATCH}/insert_scripts/ddl_dedup_tables"),
-    ("ddl_source_devtest", f"{BASE}/match_and_merge/insert_scripts/ddl_source_devtest.py", f"{WS_MATCH}/insert_scripts/ddl_source_devtest"),
-    ("config_devtest",     f"{BASE}/match_and_merge/insert_scripts/config_devtest.py",      f"{WS_MATCH}/insert_scripts/config_devtest"),
-    ("data_prep_dedup",    f"{BASE}/unittest/dedup/data_prep_dedup.py",                     f"{WS_DEDUP}/unittest/dedup/data_prep_dedup"),
-    ("vrh_chv_dedup_v2",  f"{BASE}/dedup/vrh_chv_dedup_v2.py",                             f"{WS_DEDUP}/vrh_chv_dedup_v2"),
-    ("test_dedup_v2",      f"{BASE}/unittest/dedup/test_dedup_v2.py",                       f"{WS_DEDUP}/unittest/dedup/test_dedup_v2"),
+    ("ddl_dedup_tables",      f"{BASE}/match_and_merge/insert_scripts/ddl_dedup_tables.py",   f"{WS_MATCH}/insert_scripts/ddl_dedup_tables"),
+    ("ddl_source_devtest",    f"{BASE}/match_and_merge/insert_scripts/ddl_source_devtest.py", f"{WS_MATCH}/insert_scripts/ddl_source_devtest"),
+    ("config_devtest",        f"{BASE}/match_and_merge/insert_scripts/config_devtest.py",      f"{WS_MATCH}/insert_scripts/config_devtest"),
+    ("data_prep_dedup",       f"{BASE}/unittest/dedup/data_prep_dedup.py",                     f"{WS_DEDUP}/unittest/dedup/data_prep_dedup"),
+    ("ddl_dedup_outputs",     f"{BASE}/dedup/ddl_dedup_tables.py",                             f"{WS_DEDUP}/ddl_dedup_tables"),
+    ("dedup_customer_name",   f"{BASE}/dedup/dedup_customer_name.py",                          f"{WS_DEDUP}/dedup_customer_name"),
+    ("dedup_province",        f"{BASE}/dedup/dedup_province.py",                               f"{WS_DEDUP}/dedup_province"),
+    ("dedup_gender",          f"{BASE}/dedup/dedup_gender.py",                                 f"{WS_DEDUP}/dedup_gender"),
+    ("dedup_email",           f"{BASE}/dedup/dedup_email.py",                                  f"{WS_DEDUP}/dedup_email"),
+    ("dedup_phone",           f"{BASE}/dedup/dedup_phone.py",                                  f"{WS_DEDUP}/dedup_phone"),
+    ("test_dedup_v2",         f"{BASE}/unittest/dedup/test_dedup_v2.py",                       f"{WS_DEDUP}/unittest/dedup/test_dedup_v2"),
 ]
 
 w = get_workspace_client()

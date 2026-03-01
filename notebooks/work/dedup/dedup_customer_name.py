@@ -25,8 +25,8 @@ SELECT
     fname,
     lname,
     norm_prefix              AS prefix,
-    MAX(update_date)         AS update_date,
-    collect_list(rec_key)    AS rec_keyvalue
+    MAX(update_date)                      AS update_date,
+    array_distinct(collect_list(rec_key)) AS rec_keyvalue
 FROM (
     SELECT
         bkey, id_card, fname, lname, prefix, update_date, rec_key,
@@ -64,13 +64,14 @@ GROUP BY bkey, id_card, fname, lname, norm_prefix
 # COMMAND ----------
 # MAGIC %sql
 -- Step 3: MERGE INTO dedup_customer_name
+-- NOTE: prefix ใช้ <=> (null-safe equal) เพราะ prefix อาจ NULL
 MERGE INTO viriyah_cdqm_poc.silver.dedup_customer_name AS target
 USING customer_name_staging AS source
 ON  target.bkey    = source.bkey
 AND target.id_card = source.id_card
 AND target.fname   = source.fname
 AND target.lname   = source.lname
-AND target.prefix  = source.prefix
+AND target.prefix  <=> source.prefix
 WHEN MATCHED THEN UPDATE SET
     target.update_date  = source.update_date,
     target.rec_keyvalue = source.rec_keyvalue

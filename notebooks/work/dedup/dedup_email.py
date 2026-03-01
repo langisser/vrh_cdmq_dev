@@ -21,8 +21,8 @@ WHERE lower(`table`) = lower('viriyah_cdqm_poc.silver.source_motor_devtest')
 CREATE OR REPLACE TEMP VIEW email_staging AS
 SELECT
     bkey, id_card, email,
-    MAX(update_date)       AS update_date,
-    collect_list(rec_key)  AS rec_keyvalue
+    MAX(update_date)                      AS update_date,
+    array_distinct(collect_list(rec_key)) AS rec_keyvalue
 FROM (
     -- existing rows (explode rec_keyvalue กลับมาเป็น individual keys)
     SELECT bkey, id_card, email,
