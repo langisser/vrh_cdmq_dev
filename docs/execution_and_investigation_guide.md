@@ -8,14 +8,18 @@
 ## Overview — Execution Flow
 
 ```
-vrh_chv_main_v2
-    │
-    ├── [1] vrh_chv_pre_validation_v2  ← run for SOURCE_MOTOR
-    ├── [2] vrh_chv_pre_validation_v2  ← run for TRUST_SOURCE
-    │         (one run per unique MATCHING_TABLE in config)
-    │
-    └── [3] vrh_chv_match_v2           ← run for SOURCE_MOTOR
+[1] vrh_chv_pre_validation_v2  ← run for SOURCE_MOTOR (MAIN table)
+[2] vrh_chv_pre_validation_v2  ← run for TRUST_SOURCE (MATCHING table)
+[3] vrh_chv_match_v2           ← BKEY assignment (Union-Find)
+[4] dedup_customer_name  ┐
+    dedup_province       │ ← individual dedup notebooks
+    dedup_gender         │   run per-table, per data_dt
+    dedup_email          │
+    dedup_phone          ┘
 ```
+
+> **Note:** `vrh_chv_main_v2` is the orchestrator notebook in production.
+> For dev/debug, run each notebook individually (Option B below).
 
 ---
 
@@ -36,7 +40,7 @@ Matching       : EDP_MATCHING_V2_{TABLE_NAME}_DATE_{data_date}   เช่น ED
 
 ## Step 2 — Execution
 
-### Option A: Run ผ่าน vrh_chv_main_v2 (แนะนำ)
+### Option A: Run ผ่าน vrh_chv_main_v2 (production)
 
 ```
 Notebook  : /Workspace/Users/.../vrh/match_and_merge/vrh_chv_main_v2
@@ -50,7 +54,9 @@ vrh_chv_main_v2 จะ:
 2. Run `vrh_chv_pre_validation_v2` ให้ทุกตาราง (SOURCE_MOTOR + TRUST_SOURCE)
 3. Run `vrh_chv_match_v2` สำหรับ SOURCE_MOTOR
 
-### Option B: Run ทีละ notebook (debug mode)
+หลัง match เสร็จ — รัน dedup notebooks แยกต่างหาก (ดู Step 2.4)
+
+### Option B: Run ทีละ notebook (dev/debug)
 
 > **PARAMS format:** ใช้ `^|` เป็น separator, `ENV` ต้องเป็น `'dev'` เสมอ (ไม่ใช่ blank)
 > **PRCS_NM:** ตั้งชื่อให้สอดคล้องกับ table + data_date เพื่อ query log ได้ง่าย
@@ -90,6 +96,29 @@ ENV       : dev
 ```
 
 > **เปลี่ยน data_date:** แก้ `2025-01-01` → วันที่ต้องการ แล้วแก้ PRCS_NM ให้ตรงด้วย เช่น `EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2025-01-02`
+
+```
+# Step 2.4 — Dedup (รันหลัง match เสร็จ)
+# รัน 5 notebooks ด้านล่าง ทีละตัว (ลำดับไม่สำคัญ)
+
+Notebook  : dedup/dedup_customer_name
+PARAMS    : viriyah_cdqm_poc.silver.source_motor_devtest^|2025-01-01^|EDP_DEDUP_CUSTOMER_NAME^|1
+
+Notebook  : dedup/dedup_province
+PARAMS    : viriyah_cdqm_poc.silver.source_motor_devtest^|2025-01-01^|EDP_DEDUP_PROVINCE^|1
+
+Notebook  : dedup/dedup_gender
+PARAMS    : viriyah_cdqm_poc.silver.source_motor_devtest^|2025-01-01^|EDP_DEDUP_GENDER^|1
+
+Notebook  : dedup/dedup_email
+PARAMS    : viriyah_cdqm_poc.silver.source_motor_devtest^|2025-01-01^|EDP_DEDUP_EMAIL^|1
+
+Notebook  : dedup/dedup_phone
+PARAMS    : viriyah_cdqm_poc.silver.source_motor_devtest^|2025-01-01^|EDP_DEDUP_PHONE^|1
+```
+
+> แต่ละ dedup notebook ใช้ MERGE pattern — รันซ้ำได้ (idempotent)
+> Script rebuild ทั้งหมด: `scripts/run_dedup_full_rebuild.py`
 
 ---
 
@@ -292,6 +321,45 @@ WHERE b.DATA_DT         = '2026-01-05'
 
 ---
 
+### 3.5 Dedup Output Tables
+
+**ตรวจสอบ duplicate groups (expect 0)**
+```sql
+SELECT 'dedup_customer_name' AS tbl, COUNT(*) AS dup_groups FROM (
+    SELECT bkey, id_card, fname, lname, prefix, COUNT(*) AS n
+    FROM viriyah_cdqm_poc.silver.dedup_customer_name
+    GROUP BY bkey, id_card, fname, lname, prefix HAVING n > 1)
+UNION ALL
+SELECT 'dedup_gender', COUNT(*) FROM (
+    SELECT bkey, id_card, gender, birth_date, COUNT(*) AS n
+    FROM viriyah_cdqm_poc.silver.dedup_gender
+    GROUP BY bkey, id_card, gender, birth_date HAVING n > 1)
+UNION ALL
+SELECT 'dedup_province', COUNT(*) FROM (
+    SELECT bkey, id_card, area, district, postcode, province, COUNT(*) AS n
+    FROM viriyah_cdqm_poc.silver.dedup_province
+    GROUP BY bkey, id_card, area, district, postcode, province HAVING n > 1)
+UNION ALL
+SELECT 'dedup_email', COUNT(*) FROM (
+    SELECT bkey, id_card, email, COUNT(*) AS n
+    FROM viriyah_cdqm_poc.silver.dedup_email
+    GROUP BY bkey, id_card, email HAVING n > 1)
+UNION ALL
+SELECT 'dedup_phone', COUNT(*) FROM (
+    SELECT bkey, id_card, phone_no, COUNT(*) AS n
+    FROM viriyah_cdqm_poc.silver.dedup_phone
+    GROUP BY bkey, id_card, phone_no HAVING n > 1);
+```
+
+**ตรวจ Thai unicode name variants**
+```sql
+SELECT * FROM viriyah_cdqm_poc.silver.dedup_name_variant_report
+ORDER BY bkey;
+-- รัน dedup/dedup_name_variant_report notebook เพื่อ refresh
+```
+
+---
+
 ## Step 4 — Full Investigation Dashboard (รัน ทีเดียวครบ)
 
 ```sql
@@ -337,12 +405,15 @@ ORDER BY STAGE, TABLE;
 ## Summary — ตาราง Log ที่ต้องดู
 
 ```
-STAGE               TABLE                          ดูอะไร
-────────────────────────────────────────────────────────────────────
-[1] Pre-validation  chv_pre_validation_result_v2      record FAILED ก่อน matching
-[2] Raw match       chv_matching_log_v2               แต่ละ rule match ได้กี่คู่
-[3] Passed pairs    chv_matching_result_v2            คู่ที่ผ่าน weight threshold
-[4] BKEY output     chv_table_bkey_v2                 BKEY ที่ assign จริง
+STAGE               TABLE                              ดูอะไร
+─────────────────────────────────────────────────────────────────────────
+[1] Pre-validation  chv_pre_validation_result_v2        record FAILED ก่อน matching
+[2] Raw match       chv_matching_log_v2                 แต่ละ rule match ได้กี่คู่
+[3] Passed pairs    chv_matching_result_v2              คู่ที่ผ่าน weight threshold
+[4] BKEY output     chv_table_bkey_v2                   BKEY ที่ assign จริง
+[5] Dedup output    dedup_customer_name/province/        grouped dedup tables
+                    gender/email/phone
+[6] Name variants   dedup_name_variant_report            Thai unicode anomalies
 ```
 
 ---
