@@ -205,10 +205,11 @@ GROUP BY b.bkey, s.id_card, s.fname, s.lname, s.prefix
 
 ---
 
-## Issue 6 — Thai Unicode Name Variants in dedup_customer_name `[PENDING]`
+## Issue 6 — Thai Unicode Name Variants in dedup_customer_name `[RESOLVED ✅]`
 
 **ค้นพบจาก:** Unicode combining-mark reorder analysis — 2026-03-02
-**Status:** Implementation done (validation report), business decision pending
+**Confirmed:** 2026-03-02
+**Status:** Resolved — Option B confirmed by business user
 
 ### Context
 
@@ -230,23 +231,15 @@ This causes `dedup_customer_name` to store **two rows** for the same person (dif
 - bkey=12 — lname variant (combining-mark order wrong)
 - bkey=226 — fname variant
 
-### Open Question — Business Decision Needed
+### Decision
 
-> **Q4 (from GitHub issue #2): ถ้าพบ variant rows ใน `dedup_name_variant_report` — ควร normalize ชื่อก่อน INSERT หรือ keep raw?**
+> **ใช้ Option B — Keep raw names, detect via report**
+> เก็บ raw name ตาม source ใน `dedup_customer_name` — ไม่ normalize ก่อน INSERT
+> ใช้ `silver.dedup_name_variant_report` เป็น detection layer แทน
 
-| Option | Approach | Trade-off |
-|---|---|---|
-| A — Normalize on write | Apply `normalize_thai()` before MERGE into dedup | ชื่อที่บันทึกอาจต่างจาก source; ต้องแก้ notebook |
-| B — Keep raw, report only | Current approach — store raw, report variants separately | ข้อมูลตรงกับ source แต่ name matching ใน future อาจ miss |
-| C — Normalize only duplicates | ตรวจหา variant → merge เป็น row เดียว (normalize key) | Complex, requires dedup re-merge logic |
+### Dev Impact
 
-**Dev recommendation:** Option A (normalize on write) — ป้องกัน false duplicate ตั้งแต่ต้น
-
-### Dev Impact (if Option A chosen)
-
-- แก้ `dedup_customer_name.py` staging query — เพิ่ม `normalize_thai()` UDF ก่อน GROUP BY
-- `normalize_thai_udf` ต้อง register ก่อน staging query
-- รัน full rebuild ของ `dedup_customer_name` หลังแก้
+ไม่มี — current implementation ถูกต้องแล้ว (Option B deployed)
 
 ---
 
@@ -259,10 +252,10 @@ This causes `dedup_customer_name` to store **two rows** for the same person (dif
 | 3 | Unmatched MATCHING table BKEY | Business User | Medium | ✅ Resolved — TRUST_SOURCE runs as MAIN |
 | 4 | Source-to-source match (8410 ↔ 8420) | Business User | Medium | ✅ Resolved — ยอมรับได้ |
 | 5 | Dedup output tables (post-BKEY merge layer) | Business User | Medium | ✅ Confirmed — all open questions resolved |
-| 6 | Thai unicode name variants — normalize on write vs keep raw | Business User | Medium | `[PENDING]` — report implemented, normalization strategy TBD |
+| 6 | Thai unicode name variants — normalize on write vs keep raw | Business User | Medium | ✅ Resolved — Option B (keep raw, report only) |
 
 ---
 
 *Document created: 2026-02-22*
-*Last updated: 2026-03-02 — Added Issue 6: Thai unicode variant decision pending. Issues 1–5 resolved.*
+*Last updated: 2026-03-02 — Issue 6 resolved: keep raw names, detect via dedup_name_variant_report. All issues resolved.*
 *Based on analysis of SCN03, SCN04, SCN05 test results and code review of `vrh_chv_match_v2.py`*
