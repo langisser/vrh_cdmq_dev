@@ -5,7 +5,7 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-memory"],
       "env": {
-        "MEMORY_FILE_PATH": "/home/khaw/shared-memory/vrh_pipeline.json"
+        "MEMORY_FILE_PATH": "/home/khaw/shared-memory/vrh_cdqm_dev.json"
       }
     }
   }
