@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "shared-memory": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {
+        "MEMORY_FILE_PATH": "/home/khaw/shared-memory/vrh_pipeline.json"
+      }
+    }
+  }
+}
