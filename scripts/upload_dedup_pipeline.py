@@ -26,6 +26,7 @@ UPLOADS = [
     ("dedup_gender",          f"{BASE}/dedup/dedup_gender.py",                                 f"{WS_DEDUP}/dedup_gender"),
     ("dedup_email",           f"{BASE}/dedup/dedup_email.py",                                  f"{WS_DEDUP}/dedup_email"),
     ("dedup_phone",           f"{BASE}/dedup/dedup_phone.py",                                  f"{WS_DEDUP}/dedup_phone"),
+    ("dedup_name_variant_report", f"{BASE}/dedup/dedup_name_variant_report.py",              f"{WS_DEDUP}/dedup_name_variant_report"),
     ("test_dedup_v2",         f"{BASE}/unittest/dedup/test_dedup_v2.py",                       f"{WS_DEDUP}/unittest/dedup/test_dedup_v2"),
 ]
 

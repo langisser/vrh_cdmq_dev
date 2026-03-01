@@ -108,6 +108,17 @@ Delimiter: `^|` (caret-pipe). See `docs/job_run_spec.md` for full field referenc
 - **`ENV` must be `'dev'`** — never blank or empty string
 - **Dedup tables** use Liquid Clustering on `(bkey, id_card)` — do not add ZORDER or PARTITION BY
 - **Column `rec_keyvalue`** is `ARRAY<STRING>` — not `policy_keys`, not `policy_no`
+- **MERGE predicate with nullable columns** — use `<=>` (null-safe equal), not `=`
+- **`collect_list()` in dedup** — always wrap with `array_distinct()` to avoid duplicate keys
+- **`databricks-connect` version** must match DBR major version — cluster is DBR 17.3, pin `==17.3.*`
+- **Thai combining-mark normalization** — `unicodedata.normalize('NFC')` alone is insufficient; use `normalize_thai()` in `dedup_name_variant_report.py`
+
+## Dedup Pipeline Scripts
+
+| Script | What it does |
+|---|---|
+| `scripts/upload_dedup_pipeline.py` | Upload all dedup notebooks to Databricks workspace |
+| `scripts/run_dedup_full_rebuild.py` | DROP + recreate all 5 dedup tables then re-run (use after data corruption) |
 
 ## Key Docs
 
@@ -116,4 +127,4 @@ Delimiter: `^|` (caret-pipe). See `docs/job_run_spec.md` for full field referenc
 | `docs/job_run_spec.md` | Full run parameters, PARAMS format, devtest examples |
 | `docs/design_chv_v2.md` | TIER+SUBJECT design, BKEY phases, Union-Find |
 | `docs/execution_and_investigation_guide.md` | Investigation SQL queries, pipeline order |
-| `docs/pending_decisions.md` | All resolved business decisions |
+| `docs/pending_decisions.md` | Business decisions + known issues |
