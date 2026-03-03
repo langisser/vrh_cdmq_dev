@@ -231,13 +231,10 @@ for tier_idx, tier in enumerate(tier_values):
         inner_sql.append(sub_sql)
 
         # Join condition between main_df and match_df
-        # MAIN.id_card = MATCH.id_card is added as a prefix-blocking predicate for
-        # performance: Spark can use it for partition pruning / broadcast join without
-        # changing any matching logic (rules still decide the final PASSED/FAILED result).
         if i.MAIN_TABLE != i.MATCHING_TABLE:
-            sub_sql2 = f"({i.MATCH_CONDITION.replace('LEFT JOIN MATCH ON','').strip()} AND MAIN.id_card = MATCH.id_card AND MAIN.RULES = '{i.MATCHING_RULES}' AND MATCH.RULES = '{i.MATCHING_RULES}')".replace('MAIN.%PK_MAIN%',f"CONCAT_WS(',',{config.iloc[0]['PK_CONCATENATED_x']})").replace('%PK_MATCH%','KEY')
+            sub_sql2 = f"({i.MATCH_CONDITION.replace('LEFT JOIN MATCH ON','').strip()} AND MAIN.RULES = '{i.MATCHING_RULES}' AND MATCH.RULES = '{i.MATCHING_RULES}')".replace('MAIN.%PK_MAIN%',f"CONCAT_WS(',',{config.iloc[0]['PK_CONCATENATED_x']})").replace('%PK_MATCH%','KEY')
         else :
-            sub_sql2 = f"({i.MATCH_CONDITION.replace('LEFT JOIN MATCH ON','').strip()} AND MAIN.id_card = MATCH.id_card AND MAIN.RULES = '{i.MATCHING_RULES}' AND MATCH.RULES = '{i.MATCHING_RULES}' AND MAIN.KEY <> MATCH.KEY)".replace('MAIN.%PK_MAIN%',f"CONCAT_WS(',',{config.iloc[0]['PK_CONCATENATED_x']})").replace('%PK_MATCH%','KEY')
+            sub_sql2 = f"({i.MATCH_CONDITION.replace('LEFT JOIN MATCH ON','').strip()} AND MAIN.RULES = '{i.MATCHING_RULES}' AND MATCH.RULES = '{i.MATCHING_RULES}' AND MAIN.KEY <> MATCH.KEY)".replace('MAIN.%PK_MAIN%',f"CONCAT_WS(',',{config.iloc[0]['PK_CONCATENATED_x']})").replace('%PK_MATCH%','KEY')
         join_sql.append(sub_sql2)
 
     # Build tier SQL — outer SELECT includes MAIN.SUBJECT
@@ -287,7 +284,7 @@ df = spark.sql(f"select * from {catalog}.{fw_schema}.chv_matching_log_v2 where D
 
 # COMMAND ----------
 
-# df.display()  # disabled — display() collects all rows to driver (OOM risk at scale)
+df.display()
 
 # COMMAND ----------
 
@@ -370,7 +367,7 @@ spark.sql(f"insert overwrite {catalog}.{fw_schema}.chv_matching_result_v2 partit
 
 # COMMAND ----------
 
-# match_df.display()  # disabled — display() collects all rows to driver (OOM risk at scale)
+match_df.display()
 
 # COMMAND ----------
 
@@ -462,13 +459,97 @@ bkey_exists_rs = bkey_exists_rs.dropDuplicates()
 gen_bkey_filter = df.filter((df["MATCH_BKEY"].isNull() & df["MAIN_BKEY"].isNull()))
 
 # Build subject_map: (table, key) → SUBJECT
-# Only select needed columns to reduce driver memory pressure
+# Used later to attach SUBJECT when building bkey_df from bkey_dict
 subject_map = {}
-for row in gen_bkey_filter.select("MAIN_TABLE", "KEY_MAIN", "MATCHING_TABLE", "KEY_MATCH", "SUBJECT").collect():
+for row in gen_bkey_filter.collect():
     subject_map[(row.MAIN_TABLE, row.KEY_MAIN)] = row.SUBJECT
     subject_map[(row.MATCHING_TABLE, row.KEY_MATCH)] = row.SUBJECT
 
 gen_bkey = gen_bkey_filter
+
+# COMMAND ----------
+
+table_s = set()
+for i in config_matching.select('MAIN_TABLE').dropDuplicates().collect() :
+  table_s.add(i.MAIN_TABLE.replace('%ENV%',env).lower())
+for i in config_matching.select('MATCHING_TABLE').dropDuplicates().collect() :
+  table_s.add(i.MATCHING_TABLE.replace('%ENV%',env).lower())
+
+# COMMAND ----------
+
+bkey_dict = {}
+for i in table_s :
+  bkey_dict[i] = {}
+
+#generate relation of main_table,match_table,main_key,match_key in dict format
+for i in gen_bkey.orderBy("KEY_MAIN", "KEY_MATCH").collect():
+  if i.KEY_MAIN not in bkey_dict[i.MAIN_TABLE].keys() and i.KEY_MATCH not in bkey_dict[i.MATCHING_TABLE].keys():
+    bkey_dict[i.MAIN_TABLE][i.KEY_MAIN] = {}
+    bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH] = {}
+    for t in table_s :
+      bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][t] = {}
+      bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][t] = {}
+    bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][i.MATCHING_TABLE] = set([i.KEY_MATCH])
+    bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][i.MAIN_TABLE] = set([i.KEY_MAIN])
+
+  elif i.KEY_MAIN not in bkey_dict[i.MAIN_TABLE].keys() and i.KEY_MATCH in bkey_dict[i.MATCHING_TABLE].keys() :
+    bkey_dict[i.MAIN_TABLE][i.KEY_MAIN] = {}
+    for t in table_s :
+      bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][t] = {}
+    bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][i.MATCHING_TABLE] = set([i.KEY_MATCH])
+    bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][i.MAIN_TABLE] = set(bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][i.MAIN_TABLE]) | set([i.KEY_MAIN])
+
+  elif i.KEY_MAIN in bkey_dict[i.MAIN_TABLE].keys() and i.KEY_MATCH not in bkey_dict[i.MATCHING_TABLE].keys() :
+    bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH] = {}
+    for t in table_s :
+      bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][t] = {}
+    bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][i.MAIN_TABLE] = set([i.KEY_MAIN])
+    bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][i.MATCHING_TABLE] = set(bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][i.MATCHING_TABLE]) | set([i.KEY_MATCH])
+
+  else :
+    bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][i.MAIN_TABLE] = set(bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][i.MAIN_TABLE]) | set([i.KEY_MAIN])
+    bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][i.MATCHING_TABLE] = set(bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][i.MATCHING_TABLE]) | set([i.KEY_MATCH])
+
+# COMMAND ----------
+
+# recursive function to find all records that should share the same BKEY
+def find_related_records(main_table, main_key, bkey_dict, visited=None):
+    if visited is None:
+        visited = set()
+
+    records = set()
+
+    if main_key not in visited:
+        visited.add(main_key)
+        records.add((main_table, main_key))
+
+        if main_table in bkey_dict and main_key in bkey_dict[main_table]:
+            match_info = bkey_dict[main_table][main_key]
+
+            for match_table, match_keys in match_info.items():
+                for match_key in match_keys:
+                    records |= find_related_records(match_table, match_key, bkey_dict, visited)
+
+    return records
+
+data = []
+# find all relations for all keys
+for i in gen_bkey.orderBy("KEY_MAIN", "KEY_MATCH").collect():
+  result = find_related_records(table.replace('%ENV%',env).lower(), i.KEY_MAIN,bkey_dict)
+  for r in result :
+    data.append((table.replace('%ENV%',env).lower(),r[0],i.KEY_MAIN,r[1]))
+
+# Define the schema for the DataFrame
+schema = StructType([
+    StructField("MAIN_TABLE", StringType(), True),
+    StructField("MATCHING_TABLE", StringType(), True),
+    StructField("KEY_MAIN", StringType(), True),
+    StructField("KEY_MATCH", StringType(), True)
+])
+
+# Create a DataFrame
+gen_bkey = spark.createDataFrame(data, schema=schema)
+gen_bkey = gen_bkey.dropDuplicates()
 
 # COMMAND ----------
 
