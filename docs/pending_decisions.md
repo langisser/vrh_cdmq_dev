@@ -243,6 +243,59 @@ This causes `dedup_customer_name` to store **two rows** for the same person (dif
 
 ---
 
+## Issue 7 — Levenshtein Prefix Blocking: LEFT(fname,2) vs LEFT(fname,1) `[PENDING]`
+
+**ค้นพบจาก:** Performance test — 100K rows, Stage D (match) ช้ามาก (~18+ นาที) — 2026-03-03
+**Status:** Pending business decision
+
+### Context
+
+Tier 2 self-join (source_motor × source_motor) ใช้ Levenshtein บน fname/lname โดยไม่มี pre-filter
+ที่ 100K rows = 10B pairs → CPU-bound → ช้ามาก
+
+**Fix ที่ implement แล้ว:** `LEFT(fname,1) = LEFT(fname,1)` นำหน้า Levenshtein
+- ลด pairs ~91% → ~50-70x เร็วขึ้น
+- Spark เปลี่ยนจาก BroadcastNestedLoopJoin → HashJoin
+- Regression test บน 1,442 rows (2025-01-01 + 2025-01-02) **PASS** — motor-trust pairings identical
+
+**ผล timing จริง:**
+- 10K rows: **2.8 นาที** (vs ไม่เสร็จก่อน)
+- 50K rows (estimate): **~70 นาที** (quadratic scale)
+- 100K rows (estimate): **~280 นาที** (~4.7 ชั่วโมง) — ยังช้าอยู่
+
+### ทางเลือกเพื่อเพิ่มความเร็วอีก
+
+| Option | วิธี | ลด pairs รวม | เวลา 100K (estimate) | False Negative |
+|---|---|---|---|---|
+| A (current) | `LEFT(fname,1)` | ~91% | ~280 min | **ไม่มี** |
+| B | `LEFT(fname,2)` | ~99% | ~28 min | **มี** — พบ 2 cases ใน 1,442 rows |
+| C | `LEFT(fname,1)` + cluster 3x | ~91% + 3x parallel | ~93 min | ไม่มี |
+| D | `LEFT(fname,2)` + cluster 3x | ~99% + 3x parallel | **~9 min** ✅ | มี (acceptable?) |
+
+### False Negative ที่พบจาก LEFT(fname,2) (2 cases ใน devtest)
+
+| Motor KEY | Trust KEY | motor_fname | trust_fname | ปัญหา |
+|---|---|---|---|---|
+| pol128 | 1650300033691 | ลีชานันท์ | ลิชานันทน์ | `ลี` ≠ `ลิ` → blocked |
+| pol420 | 1920500071527 | โสกิตติธรกุล (lname) | โล่กิตติธรกุล (lname) | `โส` ≠ `โล่` → blocked |
+
+หมายเหตุ: ทั้งสองคู่มี id_card เหมือนกัน → ยังถูก match ผ่าน rule 31 (id_card exact) อยู่
+แต่ถ้ามี case ที่ id_card ต่างกันแต่ชื่อต่างตัวแรก 2 ตัว → จะหาย
+
+### คำถามสำหรับ Business User
+
+> **"ชื่อที่คนๆ เดียวกัน อาจสะกดแตกต่างกันในตัวอักษรที่ 2 ของชื่อ/นามสกุลได้ไหม?**
+> ถ้ายอมรับได้ว่าอาจ miss บางกรณีที่ตัวอักษรที่ 1-2 ต่างกัน → ใช้ LEFT(fname,2) ได้
+> ถ้าต้องการ recall สูงสุด (ไม่ยอม miss เลย) → ต้องขยาย cluster แทน"
+
+### Dev Impact (ถ้าเลือก LEFT(fname,2))
+
+- แก้ `chv_config_matching_v2` rules 32, 33, 35, 36, 38, 39
+- เปลี่ยน `LEFT(MAIN.fname,1) = LEFT(MATCH.fname,1)` → `LEFT(MAIN.fname,2) = LEFT(MATCH.fname,2)`
+- พร้อม implement ได้ทันทีเมื่อ business approve
+
+---
+
 ## Summary — Decision Needed
 
 | # | Issue | Owner | Priority | Status |
@@ -253,9 +306,10 @@ This causes `dedup_customer_name` to store **two rows** for the same person (dif
 | 4 | Source-to-source match (8410 ↔ 8420) | Business User | Medium | ✅ Resolved — ยอมรับได้ |
 | 5 | Dedup output tables (post-BKEY merge layer) | Business User | Medium | ✅ Confirmed — all open questions resolved |
 | 6 | Thai unicode name variants — normalize on write vs keep raw | Business User | Medium | ✅ Resolved — Option B (keep raw, report only) |
+| 7 | Levenshtein prefix blocking: LEFT(fname,1) vs LEFT(fname,2) for performance | Business User | High | **[PENDING]** — ต้องการ decision ว่ายอมรับ false negative จาก LEFT(fname,2) ได้ไหม |
 
 ---
 
 *Document created: 2026-02-22*
-*Last updated: 2026-03-02 — Issue 6 resolved: keep raw names, detect via dedup_name_variant_report. All issues resolved.*
+*Last updated: 2026-03-03 — Issue 7 added: prefix blocking level decision pending.*
 *Based on analysis of SCN03, SCN04, SCN05 test results and code review of `vrh_chv_match_v2.py`*

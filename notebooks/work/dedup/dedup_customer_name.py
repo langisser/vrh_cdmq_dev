@@ -8,16 +8,19 @@
 # MAGIC ตัวอย่าง: `viriyah_cdqm_poc.silver.source_motor_devtest^|2025-01-01^|EDP_DEDUP_CUSTOMER_NAME^|1`
 
 # COMMAND ----------
-# MAGIC %sql
--- Step 1: หา affected BKEYs
-SELECT DISTINCT bkey
-FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2
-WHERE lower(`table`) = lower('viriyah_cdqm_poc.silver.source_motor_devtest')
-  AND data_dt = '2025-01-01'
+
+params_raw = dbutils.widgets.get("PARAMS")
+parts = params_raw.split("^|")
+source_table = parts[0].strip()
+data_dt      = parts[1].strip()
+
+print(f"source_table : {source_table}")
+print(f"data_dt      : {data_dt}")
 
 # COMMAND ----------
-# MAGIC %sql
--- Step 2: สร้าง temp view = existing (explode) UNION ALL source ใหม่ พร้อม normalize prefix
+
+# Step 2: สร้าง temp view = existing (explode) UNION ALL source ใหม่ พร้อม normalize prefix
+spark.sql(f"""
 CREATE OR REPLACE TEMP VIEW customer_name_staging AS
 SELECT
     bkey,
@@ -43,8 +46,8 @@ FROM (
         WHERE bkey IN (
             SELECT DISTINCT bkey
             FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2
-            WHERE lower(`table`) = lower('viriyah_cdqm_poc.silver.source_motor_devtest')
-              AND data_dt = '2025-01-01'
+            WHERE lower(`table`) = lower('{source_table}')
+              AND data_dt = '{data_dt}'
         )
 
         UNION ALL
@@ -53,18 +56,20 @@ FROM (
         SELECT b.bkey, s.id_card, s.fname, s.lname, s.prefix,
                s.update_date, s.policy_id AS rec_key
         FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2 b
-        JOIN viriyah_cdqm_poc.silver.source_motor_devtest s
+        JOIN {source_table} s
           ON b.key = COALESCE(s.policy_id, 'null_val')
-         AND lower(b.`table`) = lower('viriyah_cdqm_poc.silver.source_motor_devtest')
-         AND s.data_dt = '2025-01-01'
+         AND lower(b.`table`) = lower('{source_table}')
+         AND s.data_dt = '{data_dt}'
     )
 )
 GROUP BY bkey, id_card, fname, lname, norm_prefix
+""")
 
 # COMMAND ----------
-# MAGIC %sql
--- Step 3: MERGE INTO dedup_customer_name
--- NOTE: prefix ใช้ <=> (null-safe equal) เพราะ prefix อาจ NULL
+
+# Step 3: MERGE INTO dedup_customer_name
+# NOTE: prefix ใช้ <=> (null-safe equal) เพราะ prefix อาจ NULL
+spark.sql("""
 MERGE INTO viriyah_cdqm_poc.silver.dedup_customer_name AS target
 USING customer_name_staging AS source
 ON  target.bkey    = source.bkey
@@ -76,6 +81,7 @@ WHEN MATCHED THEN UPDATE SET
     target.update_date  = source.update_date,
     target.rec_keyvalue = source.rec_keyvalue
 WHEN NOT MATCHED THEN INSERT *
+""")
 
 # COMMAND ----------
 

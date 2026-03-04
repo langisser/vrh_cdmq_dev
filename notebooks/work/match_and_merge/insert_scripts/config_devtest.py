@@ -77,16 +77,16 @@
 # MAGIC VALUES
 # MAGIC   -- TIER 1 (Dir A): source_motor_devtest → trust_source_devtest (cross-source, runs first)
 # MAGIC   (31, 'viriyah_cdqm_poc.silver.source_motor_devtest', 'viriyah_cdqm_poc.silver.trust_source_devtest', 'MAIN.id_card = MATCH.id_card',                1, 0.5,  1, 1, 'identity'),
-# MAGIC   (32, 'viriyah_cdqm_poc.silver.source_motor_devtest', 'viriyah_cdqm_poc.silver.trust_source_devtest', 'levenshtein(MAIN.fname, MATCH.fname) <= 3',   1, 0.25, 1, 1, 'identity'),
-# MAGIC   (33, 'viriyah_cdqm_poc.silver.source_motor_devtest', 'viriyah_cdqm_poc.silver.trust_source_devtest', 'levenshtein(MAIN.lname, MATCH.lname) <= 3',   1, 0.25, 1, 1, 'identity'),
+# MAGIC   (32, 'viriyah_cdqm_poc.silver.source_motor_devtest', 'viriyah_cdqm_poc.silver.trust_source_devtest', 'levenshtein(MAIN.fname, MATCH.fname) <= 3 AND MAIN.id_card = MATCH.id_card', 1, 0.25, 1, 1, 'identity'),
+# MAGIC   (33, 'viriyah_cdqm_poc.silver.source_motor_devtest', 'viriyah_cdqm_poc.silver.trust_source_devtest', 'levenshtein(MAIN.lname, MATCH.lname) <= 3 AND MAIN.id_card = MATCH.id_card', 1, 0.25, 1, 1, 'identity'),
 # MAGIC   -- TIER 2 (Dir B): source_motor_devtest → source_motor_devtest (self-match, only records unmatched in Tier 1)
 # MAGIC   (34, 'viriyah_cdqm_poc.silver.source_motor_devtest', 'viriyah_cdqm_poc.silver.source_motor_devtest', 'MAIN.id_card = MATCH.id_card',                1, 0.5,  1, 2, 'identity'),
-# MAGIC   (35, 'viriyah_cdqm_poc.silver.source_motor_devtest', 'viriyah_cdqm_poc.silver.source_motor_devtest', 'levenshtein(MAIN.fname, MATCH.fname) <= 3',   1, 0.25, 1, 2, 'identity'),
-# MAGIC   (36, 'viriyah_cdqm_poc.silver.source_motor_devtest', 'viriyah_cdqm_poc.silver.source_motor_devtest', 'levenshtein(MAIN.lname, MATCH.lname) <= 3',   1, 0.25, 1, 2, 'identity'),
+# MAGIC   (35, 'viriyah_cdqm_poc.silver.source_motor_devtest', 'viriyah_cdqm_poc.silver.source_motor_devtest', 'levenshtein(MAIN.fname, MATCH.fname) <= 3 AND MAIN.id_card = MATCH.id_card', 1, 0.25, 1, 2, 'identity'),
+# MAGIC   (36, 'viriyah_cdqm_poc.silver.source_motor_devtest', 'viriyah_cdqm_poc.silver.source_motor_devtest', 'levenshtein(MAIN.lname, MATCH.lname) <= 3 AND MAIN.id_card = MATCH.id_card', 1, 0.25, 1, 2, 'identity'),
 # MAGIC   -- TIER 1 (Dir C): trust_source_devtest → source_motor_devtest (cross-source, trust as MAIN)
 # MAGIC   (37, 'viriyah_cdqm_poc.silver.trust_source_devtest', 'viriyah_cdqm_poc.silver.source_motor_devtest', 'MAIN.id_card = MATCH.id_card',                1, 0.5,  1, 1, 'identity'),
-# MAGIC   (38, 'viriyah_cdqm_poc.silver.trust_source_devtest', 'viriyah_cdqm_poc.silver.source_motor_devtest', 'levenshtein(MAIN.fname, MATCH.fname) <= 3',   1, 0.25, 1, 1, 'identity'),
-# MAGIC   (39, 'viriyah_cdqm_poc.silver.trust_source_devtest', 'viriyah_cdqm_poc.silver.source_motor_devtest', 'levenshtein(MAIN.lname, MATCH.lname) <= 3',   1, 0.25, 1, 1, 'identity');
+# MAGIC   (38, 'viriyah_cdqm_poc.silver.trust_source_devtest', 'viriyah_cdqm_poc.silver.source_motor_devtest', 'levenshtein(MAIN.fname, MATCH.fname) <= 3 AND MAIN.id_card = MATCH.id_card', 1, 0.25, 1, 1, 'identity'),
+# MAGIC   (39, 'viriyah_cdqm_poc.silver.trust_source_devtest', 'viriyah_cdqm_poc.silver.source_motor_devtest', 'levenshtein(MAIN.lname, MATCH.lname) <= 3 AND MAIN.id_card = MATCH.id_card', 1, 0.25, 1, 1, 'identity');
 
 # COMMAND ----------
 

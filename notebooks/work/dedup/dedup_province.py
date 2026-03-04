@@ -8,16 +8,19 @@
 # MAGIC ตัวอย่าง: `viriyah_cdqm_poc.silver.source_motor_devtest^|2025-01-01^|EDP_DEDUP_PROVINCE^|1`
 
 # COMMAND ----------
-# MAGIC %sql
--- Step 1: หา affected BKEYs
-SELECT DISTINCT bkey
-FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2
-WHERE lower(`table`) = lower('viriyah_cdqm_poc.silver.source_motor_devtest')
-  AND data_dt = '2025-01-01'
+
+params_raw = dbutils.widgets.get("PARAMS")
+parts = params_raw.split("^|")
+source_table = parts[0].strip()
+data_dt      = parts[1].strip()
+
+print(f"source_table : {source_table}")
+print(f"data_dt      : {data_dt}")
 
 # COMMAND ----------
-# MAGIC %sql
--- Step 2: สร้าง temp view = existing (explode) UNION ALL source ใหม่
+
+# Step 2: สร้าง temp view = existing (explode) UNION ALL source ใหม่
+spark.sql(f"""
 CREATE OR REPLACE TEMP VIEW province_staging AS
 SELECT
     bkey, id_card, area, district, postcode, province,
@@ -31,8 +34,8 @@ FROM (
     WHERE bkey IN (
         SELECT DISTINCT bkey
         FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2
-        WHERE lower(`table`) = lower('viriyah_cdqm_poc.silver.source_motor_devtest')
-          AND data_dt = '2025-01-01'
+        WHERE lower(`table`) = lower('{source_table}')
+          AND data_dt = '{data_dt}'
     )
 
     UNION ALL
@@ -41,17 +44,19 @@ FROM (
     SELECT b.bkey, s.id_card, s.area, s.district, s.postcode, s.province,
            s.update_date, s.policy_id AS rec_key
     FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2 b
-    JOIN viriyah_cdqm_poc.silver.source_motor_devtest s
+    JOIN {source_table} s
       ON b.key = COALESCE(s.policy_id, 'null_val')
-     AND lower(b.`table`) = lower('viriyah_cdqm_poc.silver.source_motor_devtest')
-     AND s.data_dt = '2025-01-01'
+     AND lower(b.`table`) = lower('{source_table}')
+     AND s.data_dt = '{data_dt}'
 )
 GROUP BY bkey, id_card, area, district, postcode, province
+""")
 
 # COMMAND ----------
-# MAGIC %sql
--- Step 3: MERGE INTO dedup_province
--- NOTE: area/district/postcode/province ใช้ <=> (null-safe equal) เพราะ column เหล่านี้อาจ NULL
+
+# Step 3: MERGE INTO dedup_province
+# NOTE: area/district/postcode/province ใช้ <=> (null-safe equal) เพราะ column เหล่านี้อาจ NULL
+spark.sql("""
 MERGE INTO viriyah_cdqm_poc.silver.dedup_province AS target
 USING province_staging AS source
 ON  target.bkey     = source.bkey
@@ -64,3 +69,4 @@ WHEN MATCHED THEN UPDATE SET
     target.update_date  = source.update_date,
     target.rec_keyvalue = source.rec_keyvalue
 WHEN NOT MATCHED THEN INSERT *
+""")
