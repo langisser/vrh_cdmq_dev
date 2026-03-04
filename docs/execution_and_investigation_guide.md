@@ -264,40 +264,83 @@ WHERE a.DATA_DT               = '2026-01-05'
 
 ---
 
-### 3.4 BKEY Table — Final Output
+### 3.4 BKEY Table — Contract & QA Validation
 
-**ดู BKEY ทั้งหมดที่ generate**
+#### ⚠️ chv_table_bkey_v2 Semantics (อ่านก่อน query)
+
+`chv_table_bkey_v2` คือ **master key→BKEY mapping table** — ไม่ใช่ snapshot รายวัน
+
+| ประเด็น | พฤติกรรม |
+|---|---|
+| แต่ละ `(TABLE, KEY)` | ปรากฏได้ครั้งเดียวทั้ง table |
+| `DATA_DT` | วันที่ key ถูก **insert ครั้งแรก / update ครั้งล่าสุด** (activity date ≠ snapshot date) |
+| Key ที่มี BKEY แล้ว | ถ้า run ใหม่ match กับ BKEY เดิม → key เดิม **ไม่ถูก re-emit** ใน DATA_DT ใหม่ |
+| Insert pattern | `INSERT OVERWRITE partition(DATA_DT, PRCS_NM)` → write เฉพาะ keys ใหม่ของ run นั้น |
+
+**SUBJECT values:**
+- `identity` = key เป็นส่วนหนึ่งของ matched pair (weight >= 1.0)
+- `default` = key ไม่มีคู่ match (singleton, ผ่าน `not_pass_post` path) — **ถูกต้อง ไม่ใช่ bug**
+
+---
+
+#### QA Validation Queries (canonical)
+
+> **❌ DO NOT** check `COUNT(source rows for date X) == COUNT(bkey rows for date X)` — จะ fail เสมอสำหรับ repeated dates
+
+**Q_COVERAGE — source keys ต้อง resolve ได้ทุกตัว (from any DATA_DT)**
 ```sql
-SELECT
-    TABLE,
-    KEY,
-    BKEY
+-- expect: 0 rows
+SELECT COUNT(*) AS missing_bkey
+FROM viriyah_cdqm_poc.silver.source_motor_devtest s
+LEFT JOIN viriyah_cdqm_poc.silver.chv_table_bkey_v2 b
+  ON s.policy_id = b.KEY
+  AND LOWER(b.TABLE) = 'viriyah_cdqm_poc.silver.source_motor_devtest'
+WHERE s.DATA_DT = '{run_date}'
+  AND b.BKEY IS NULL;
+```
+
+**Q_UNIQUENESS — แต่ละ (table,key) มีได้แค่ 1 BKEY (across all dates)**
+```sql
+-- expect: 0 rows
+SELECT TABLE, KEY, COUNT(DISTINCT BKEY) AS bkey_count
+FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2
+GROUP BY TABLE, KEY
+HAVING COUNT(DISTINCT BKEY) > 1;
+```
+
+**Q_DELTA — new keys ของ run นี้ถูก insert**
+```sql
+-- expect: > 0
+SELECT COUNT(*) AS delta_keys
+FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2
+WHERE DATA_DT = '{run_date}'
+  AND PRCS_NM = '{prcs_nm}';
+```
+
+**Q_SUBJECT — ค่า SUBJECT ต้องเป็น identity หรือ default เท่านั้น**
+```sql
+-- expect: 0 rows (ถ้ามีค่าอื่น = bug)
+SELECT DISTINCT SUBJECT
+FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2
+WHERE SUBJECT NOT IN ('identity', 'default');
+```
+
+---
+
+#### Investigation Queries (drill-down)
+
+**ดู BKEY ทั้งหมดที่ generate ใน run นี้**
+```sql
+SELECT TABLE, KEY, BKEY, SUBJECT
 FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2
 WHERE DATA_DT = '2026-01-05'
   AND PRCS_NM = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
 ORDER BY BKEY, TABLE;
 ```
 
-**ตรวจ record ที่ได้ BKEY มากกว่า 1 (expect 0 rows)**
-```sql
-SELECT
-    KEY,
-    TABLE,
-    COUNT(DISTINCT BKEY) AS bkey_count,
-    COLLECT_LIST(BKEY)   AS bkeys
-FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2
-WHERE DATA_DT = '2026-01-05'
-  AND PRCS_NM = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
-GROUP BY KEY, TABLE
-HAVING COUNT(DISTINCT BKEY) > 1;
-```
-
 **ดู BKEY group — ใครอยู่ group เดียวกันบ้าง**
 ```sql
-SELECT
-    b.BKEY,
-    b.TABLE,
-    b.KEY
+SELECT b.BKEY, b.TABLE, b.KEY, b.SUBJECT
 FROM viriyah_cdqm_poc.silver.chv_table_bkey_v2 b
 WHERE DATA_DT = '2026-01-05'
   AND PRCS_NM = 'EDP_MATCHING_V2_SOURCE_MOTOR_DATE_2026-01-05'
