@@ -293,54 +293,46 @@ df.display()
 
 # COMMAND ----------
 
-MAIN_TABLE_L = []
-MATCHING_TABLE_L = []
-KEY_MAIN_L = []
-KEY_MATCH_L = []
-SUBJECT_L = []
-
 pair = []
 for row in config_matching.collect() :
   if [row.MAIN_TABLE.lower(),row.MATCHING_TABLE.lower()] not in pair :
     pair.append([row.MAIN_TABLE.lower(),row.MATCHING_TABLE.lower()])
 
 # PIVOT MATCHING RESULT FOR EACH RULE OF MAIN MATCH PAIR TO 1 RECORDS
+# Weight threshold filter runs on Spark (no collect on pivot result)
+all_match_dfs = []
 for main,match in pair :
   _df = df.filter((df.MAIN_TABLE == main.replace('%ENV%',env)) & (df.MATCHING_TABLE == match.replace('%ENV%',env)))
   # Include SUBJECT in groupby so it survives the pivot
   pivot_df = _df.groupby("MAIN_TABLE", "MATCHING_TABLE", "KEY_MAIN", "KEY_MATCH", "SUBJECT")\
                 .pivot("MATCHING_RULES")\
                 .agg(first("RESULT"))
-  pivot_df.createOrReplaceTempView('pivot_df')
+
   threshold_matching = config_matching.filter(lower(config_matching.MATCHING_TABLE) == match)
   threshold_dict = {}
-
-  for t_row in threshold_matching.collect() :
+  for t_row in threshold_matching.collect() :   # config rows only — tiny, safe
     if t_row.GROUP not in threshold_dict.keys() :
       threshold_dict[t_row.GROUP] = {'mtch_rules' : {t_row.MATCHING_RULES:float(t_row.WEIGHT)}}
     else :
       threshold_dict[t_row.GROUP]['mtch_rules'][t_row.MATCHING_RULES] = float(t_row.WEIGHT)
-  for p_row in pivot_df.collect() :
-    for key in threshold_dict.keys() :
-      c = 0
-      for rule in threshold_dict[key]['mtch_rules'] :
-        if str(rule) in pivot_df.columns:
-          index = pivot_df.columns.index(str(rule))
-          if p_row[index] == 'PASSED':
-            c += threshold_dict[key]['mtch_rules'][rule]
-      if c >= 1 :
-        MAIN_TABLE_L.append(p_row.MAIN_TABLE)
-        MATCHING_TABLE_L.append(p_row.MATCHING_TABLE)
-        KEY_MAIN_L.append(p_row.KEY_MAIN)
-        KEY_MATCH_L.append(p_row.KEY_MATCH)
-        SUBJECT_L.append(p_row.SUBJECT)
 
-# match_df now includes SUBJECT
-match_df = pd.DataFrame({'MAIN_TABLE':MAIN_TABLE_L,
-                         'MATCHING_TABLE' :MATCHING_TABLE_L,
-                         'KEY_MAIN':KEY_MAIN_L,
-                         'KEY_MATCH':KEY_MATCH_L,
-                         'SUBJECT':SUBJECT_L})
+  # Build Spark weight expression per GROUP; any group reaching >=1 qualifies the row
+  group_exprs = []
+  for grp, cfg in threshold_dict.items() :
+    weight_expr = reduce(
+      lambda acc, kv: acc + F.when(F.col(str(kv[0])) == 'PASSED', kv[1]).otherwise(F.lit(0)),
+      cfg['mtch_rules'].items(),
+      F.lit(0)
+    )
+    group_exprs.append(weight_expr >= 1)
+
+  if group_exprs :
+    pass_filter = group_exprs[0]
+    for expr in group_exprs[1:] :
+      pass_filter = pass_filter | expr
+    passed = pivot_df.filter(pass_filter)\
+                     .select("MAIN_TABLE", "MATCHING_TABLE", "KEY_MAIN", "KEY_MATCH", "SUBJECT")
+    all_match_dfs.append(passed)
 
 schema = StructType([
     StructField("MAIN_TABLE", StringType(), True),
@@ -350,8 +342,10 @@ schema = StructType([
     StructField("SUBJECT", StringType(), True)
 ])
 
-match_df = match_df.drop_duplicates()
-match_df = spark.createDataFrame(match_df,schema=schema)
+if all_match_dfs :
+  match_df = reduce(lambda a, b: a.unionAll(b), all_match_dfs).dropDuplicates()
+else :
+  match_df = spark.createDataFrame([], schema=schema)
 
 # COMMAND ----------
 
@@ -458,105 +452,18 @@ bkey_exists_rs = bkey_exists_rs.dropDuplicates()
 
 gen_bkey_filter = df.filter((df["MATCH_BKEY"].isNull() & df["MAIN_BKEY"].isNull()))
 
-# Build subject_map: (table, key) → SUBJECT
-# Used later to attach SUBJECT when building bkey_df from bkey_dict
-subject_map = {}
-for row in gen_bkey_filter.collect():
-    subject_map[(row.MAIN_TABLE, row.KEY_MAIN)] = row.SUBJECT
-    subject_map[(row.MATCHING_TABLE, row.KEY_MATCH)] = row.SUBJECT
-
 gen_bkey = gen_bkey_filter
 
 # COMMAND ----------
 
-table_s = set()
-for i in config_matching.select('MAIN_TABLE').dropDuplicates().collect() :
-  table_s.add(i.MAIN_TABLE.replace('%ENV%',env).lower())
-for i in config_matching.select('MATCHING_TABLE').dropDuplicates().collect() :
-  table_s.add(i.MATCHING_TABLE.replace('%ENV%',env).lower())
-
-# COMMAND ----------
-
-bkey_dict = {}
-for i in table_s :
-  bkey_dict[i] = {}
-
-#generate relation of main_table,match_table,main_key,match_key in dict format
-for i in gen_bkey.orderBy("KEY_MAIN", "KEY_MATCH").collect():
-  if i.KEY_MAIN not in bkey_dict[i.MAIN_TABLE].keys() and i.KEY_MATCH not in bkey_dict[i.MATCHING_TABLE].keys():
-    bkey_dict[i.MAIN_TABLE][i.KEY_MAIN] = {}
-    bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH] = {}
-    for t in table_s :
-      bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][t] = {}
-      bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][t] = {}
-    bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][i.MATCHING_TABLE] = set([i.KEY_MATCH])
-    bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][i.MAIN_TABLE] = set([i.KEY_MAIN])
-
-  elif i.KEY_MAIN not in bkey_dict[i.MAIN_TABLE].keys() and i.KEY_MATCH in bkey_dict[i.MATCHING_TABLE].keys() :
-    bkey_dict[i.MAIN_TABLE][i.KEY_MAIN] = {}
-    for t in table_s :
-      bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][t] = {}
-    bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][i.MATCHING_TABLE] = set([i.KEY_MATCH])
-    bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][i.MAIN_TABLE] = set(bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][i.MAIN_TABLE]) | set([i.KEY_MAIN])
-
-  elif i.KEY_MAIN in bkey_dict[i.MAIN_TABLE].keys() and i.KEY_MATCH not in bkey_dict[i.MATCHING_TABLE].keys() :
-    bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH] = {}
-    for t in table_s :
-      bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][t] = {}
-    bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][i.MAIN_TABLE] = set([i.KEY_MAIN])
-    bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][i.MATCHING_TABLE] = set(bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][i.MATCHING_TABLE]) | set([i.KEY_MATCH])
-
-  else :
-    bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][i.MAIN_TABLE] = set(bkey_dict[i.MATCHING_TABLE][i.KEY_MATCH][i.MAIN_TABLE]) | set([i.KEY_MAIN])
-    bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][i.MATCHING_TABLE] = set(bkey_dict[i.MAIN_TABLE][i.KEY_MAIN][i.MATCHING_TABLE]) | set([i.KEY_MATCH])
-
-# COMMAND ----------
-
-# recursive function to find all records that should share the same BKEY
-def find_related_records(main_table, main_key, bkey_dict, visited=None):
-    if visited is None:
-        visited = set()
-
-    records = set()
-
-    if main_key not in visited:
-        visited.add(main_key)
-        records.add((main_table, main_key))
-
-        if main_table in bkey_dict and main_key in bkey_dict[main_table]:
-            match_info = bkey_dict[main_table][main_key]
-
-            for match_table, match_keys in match_info.items():
-                for match_key in match_keys:
-                    records |= find_related_records(match_table, match_key, bkey_dict, visited)
-
-    return records
-
-data = []
-# find all relations for all keys
-for i in gen_bkey.orderBy("KEY_MAIN", "KEY_MATCH").collect():
-  result = find_related_records(table.replace('%ENV%',env).lower(), i.KEY_MAIN,bkey_dict)
-  for r in result :
-    data.append((table.replace('%ENV%',env).lower(),r[0],i.KEY_MAIN,r[1]))
-
-# Define the schema for the DataFrame
-schema = StructType([
-    StructField("MAIN_TABLE", StringType(), True),
-    StructField("MATCHING_TABLE", StringType(), True),
-    StructField("KEY_MAIN", StringType(), True),
-    StructField("KEY_MATCH", StringType(), True)
-])
-
-# Create a DataFrame
-gen_bkey = spark.createDataFrame(data, schema=schema)
-gen_bkey = gen_bkey.dropDuplicates()
-
-# COMMAND ----------
-
 # ── Phase 3: Union-Find BKEY assignment ──────────────────────────────────────
-all_pairs = gen_bkey.select("MAIN_TABLE", "KEY_MAIN", "MATCHING_TABLE", "KEY_MATCH").collect()
+# collect only unique (MAIN_TABLE, KEY_MAIN, MATCHING_TABLE, KEY_MATCH, SUBJECT) pairs
+all_pairs = gen_bkey.select("MAIN_TABLE", "KEY_MAIN", "MATCHING_TABLE", "KEY_MATCH", "SUBJECT")\
+                    .dropDuplicates(["MAIN_TABLE", "KEY_MAIN", "MATCHING_TABLE", "KEY_MATCH"])\
+                    .collect()
 
 parent = {}
+subject_map = {}  # (table, key) → SUBJECT — built from all_pairs (no extra collect)
 
 def find(x):
     if x not in parent:
@@ -570,9 +477,11 @@ def union(x, y):
     if rx != ry:
         parent[ry] = rx
 
-# Union all matched pairs into connected components
+# Union all matched pairs into connected components; collect SUBJECT at same time
 for i in all_pairs:
     union((i.MAIN_TABLE, i.KEY_MAIN), (i.MATCHING_TABLE, i.KEY_MATCH))
+    subject_map[(i.MAIN_TABLE, i.KEY_MAIN)] = i.SUBJECT
+    subject_map[(i.MATCHING_TABLE, i.KEY_MATCH)] = i.SUBJECT
 
 # Assign one BKEY integer per connected component
 component_bkey = {}
